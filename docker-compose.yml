@@ -1,0 +1,18 @@
+# La BBDD MySQL es externa (vuestro servidor). Solo se construyen backend + frontend.
+# Apunta DATABASE_URL a vuestro MySQL en backend/.env
+
+services:
+  backend:
+    build: ./backend
+    env_file: ./backend/.env
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+    restart: unless-stopped

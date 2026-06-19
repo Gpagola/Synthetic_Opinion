@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { geoPath } from "d3-geo";
 import { geoConicConformalSpain } from "d3-composite-projections";
 import { feature } from "topojson-client";
@@ -26,6 +26,28 @@ function build(topo: any, objKey: string) {
 const CCAA = build(ccaaTopo as any, "autonomous_regions");
 const PROV = build(provTopo as any, "provinces");
 
+// Rampa de azules por tema: el azul más oscuro queda en el MÁX (claro) y en el MÍN (oscuro)
+const RAMP: Record<string, { min: number[]; max: number[] }> = {
+  light: { min: [223, 234, 255], max: [9, 41, 112] },   // claro -> oscuro
+  dark: { min: [20, 40, 88], max: [132, 178, 255] },     // oscuro -> claro
+};
+
+function useThemeName(): string {
+  const [t, setT] = useState(() => document.documentElement.dataset.theme || "dark");
+  useEffect(() => {
+    const obs = new MutationObserver(() =>
+      setT(document.documentElement.dataset.theme || "dark"));
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    return () => obs.disconnect();
+  }, []);
+  return t;
+}
+
+function mix(a: number[], b: number[], t: number): string {
+  const c = a.map((x, i) => Math.round(x + (b[i] - x) * t));
+  return `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
+}
+
 export default function SpainChoropleth({
   byRegion,
   byProvince,
@@ -35,6 +57,8 @@ export default function SpainChoropleth({
 }) {
   const [level, setLevel] = useState<"ccaa" | "prov">("ccaa");
   const [hover, setHover] = useState<{ label: string; n: number } | null>(null);
+  const theme = useThemeName();
+  const ramp = RAMP[theme] ?? RAMP.dark;
 
   const isC = level === "ccaa";
   const g = isC ? CCAA : PROV;
@@ -52,12 +76,12 @@ export default function SpainChoropleth({
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: "block" }}>
         {g.fc.features.map((f: any) => {
           const n = counts[keyOf(f)] ?? 0;
-          const alpha = n ? 0.18 + 0.8 * (n / max) : 0.06;
+          const t = n ? n / max : 0;
           return (
             <path
               key={f.id}
               d={g.path(f) ?? ""}
-              fill={`rgba(91,140,255,${alpha})`}
+              fill={mix(ramp.min, ramp.max, t)}
               stroke="var(--border-strong)"
               strokeWidth={isC ? 0.4 : 0.25}
               style={{ transition: "fill 0.15s" }}

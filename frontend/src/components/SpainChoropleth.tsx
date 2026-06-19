@@ -2,7 +2,8 @@ import { useState } from "react";
 import { geoPath } from "d3-geo";
 import { geoConicConformalSpain } from "d3-composite-projections";
 import { feature } from "topojson-client";
-import topo from "es-atlas/es/autonomous_regions.json";
+import ccaaTopo from "es-atlas/es/autonomous_regions.json";
+import provTopo from "es-atlas/es/provinces.json";
 
 // id INE de CCAA (es-atlas) -> nombre de comunidad usado en nuestros datos
 const CODE2REGION: Record<string, string> = {
@@ -17,42 +18,62 @@ const CODE2REGION: Record<string, string> = {
 const W = 320;
 const H = 250;
 
-const fc: any = feature(topo as any, (topo as any).objects.autonomous_regions);
-const projection = geoConicConformalSpain().fitSize([W, H], fc);
-const pathGen = geoPath(projection as any);
-const borders = projection.getCompositionBorders();
+function build(topo: any, objKey: string) {
+  const fc: any = feature(topo, topo.objects[objKey]);
+  const proj = geoConicConformalSpain().fitSize([W, H], fc);
+  return { fc, path: geoPath(proj as any), borders: proj.getCompositionBorders() };
+}
+const CCAA = build(ccaaTopo as any, "autonomous_regions");
+const PROV = build(provTopo as any, "provinces");
 
-export default function SpainChoropleth({ counts }: { counts: Record<string, number> }) {
-  const [hover, setHover] = useState<{ region: string; n: number } | null>(null);
+export default function SpainChoropleth({
+  byRegion,
+  byProvince,
+}: {
+  byRegion: Record<string, number>;
+  byProvince: Record<string, number>;
+}) {
+  const [level, setLevel] = useState<"ccaa" | "prov">("ccaa");
+  const [hover, setHover] = useState<{ label: string; n: number } | null>(null);
+
+  const isC = level === "ccaa";
+  const g = isC ? CCAA : PROV;
+  const counts = isC ? byRegion : byProvince;
+  const keyOf = (f: any) => (isC ? CODE2REGION[f.id] ?? f.properties?.name ?? "" : f.id);
+  const labelOf = (f: any) => (isC ? CODE2REGION[f.id] ?? f.properties?.name : f.properties?.name) ?? "";
   const max = Math.max(1, ...Object.values(counts));
 
   return (
     <div>
+      <div className="dest-chips" style={{ marginBottom: 8 }}>
+        <button type="button" className={isC ? "chip active" : "chip"} onClick={() => setLevel("ccaa")}>Comunidades</button>
+        <button type="button" className={!isC ? "chip active" : "chip"} onClick={() => setLevel("prov")}>Provincias</button>
+      </div>
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: "block" }}>
-        {fc.features.map((f: any) => {
-          const region = CODE2REGION[f.id] ?? f.properties?.name ?? "";
-          const n = counts[region] ?? 0;
+        {g.fc.features.map((f: any) => {
+          const n = counts[keyOf(f)] ?? 0;
           const alpha = n ? 0.18 + 0.8 * (n / max) : 0.06;
           return (
             <path
               key={f.id}
-              d={pathGen(f) ?? ""}
+              d={g.path(f) ?? ""}
               fill={`rgba(91,140,255,${alpha})`}
               stroke="var(--border-strong)"
-              strokeWidth={0.4}
-              style={{ cursor: "default", transition: "fill 0.15s" }}
-              onMouseEnter={() => setHover({ region, n })}
+              strokeWidth={isC ? 0.4 : 0.25}
+              style={{ transition: "fill 0.15s" }}
+              onMouseEnter={() => setHover({ label: labelOf(f), n })}
               onMouseLeave={() => setHover(null)}
             >
-              <title>{`${region}: ${n}`}</title>
+              <title>{`${labelOf(f)}: ${n}`}</title>
             </path>
           );
         })}
-        <path d={borders} fill="none" stroke="var(--border)" strokeWidth={0.6} />
+        <path d={g.borders} fill="none" stroke="var(--border)" strokeWidth={0.6} />
       </svg>
       <div className="muted" style={{ fontSize: "0.78rem", marginTop: 6, minHeight: "1.2em" }}>
-        {hover ? <span><strong style={{ color: "var(--text)" }}>{hover.region}</strong> · {hover.n} personas</span>
-               : <span>Pasa el ratón por una comunidad</span>}
+        {hover
+          ? <span><strong style={{ color: "var(--text)" }}>{hover.label}</strong> · {hover.n} personas</span>
+          : <span>Pasa el ratón por {isC ? "una comunidad" : "una provincia"}</span>}
       </div>
     </div>
   );

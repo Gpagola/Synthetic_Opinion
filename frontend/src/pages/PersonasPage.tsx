@@ -238,12 +238,15 @@ export default function PersonasPage() {
     const inc: Record<string, number> = {};
     const edu: Record<string, number> = {};
     const reg: Record<string, number> = {};
+    const prov: Record<string, number> = {};
     for (const p of filtered) {
       const sd = p.sociodemografico ?? {};
       const g = normGenero(sd.genero);
       gen[g] = (gen[g] || 0) + 1;
       const rg = (sd.region ?? "").trim();
       if (rg) reg[rg] = (reg[rg] || 0) + 1;
+      const cp = (sd.codigo_postal ?? "").trim();
+      if (cp.length >= 2) { const code = cp.slice(0, 2); prov[code] = (prov[code] || 0) + 1; }
       const b = bandOf(sd.edad);
       if (b && (g === "Mujer" || g === "Hombre")) {
         const foreign = !!sd.pais_origen && sd.pais_origen.trim().toLowerCase() !== "españa";
@@ -259,7 +262,7 @@ export default function PersonasPage() {
       .map((k) => [k, gen[k]] as [string, number]);
     const incItems = INC_ORDER.filter((k) => inc[k]).map((k) => [k, inc[k]] as [string, number]);
     const eduItems = EDU_ORDER.filter((k) => edu[k]).map((k) => [k, edu[k]] as [string, number]);
-    return { pyr, genItems, incItems, eduItems, byRegion: reg };
+    return { pyr, genItems, incItems, eduItems, byRegion: reg, byProvince: prov };
   })();
 
   return (
@@ -315,7 +318,7 @@ export default function PersonasPage() {
           <div className="card"><h3>Nivel de ingresos</h3><StatBars items={stats.incItems} /></div>
         </div>
         <div className="stats-center">
-          <div className="card"><h3>Distribución territorial</h3><SpainChoropleth counts={stats.byRegion} /></div>
+          <div className="card"><h3>Distribución territorial</h3><SpainChoropleth byRegion={stats.byRegion} byProvince={stats.byProvince} /></div>
         </div>
         <div className="stats-side">
           <div className="card"><h3>Género</h3><Donut items={stats.genItems} /></div>

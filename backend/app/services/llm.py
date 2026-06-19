@@ -31,24 +31,30 @@ class OpenAIProvider:
     def complete_text(self, system: str, user: str, temperature: float | None = None) -> str:
         resp = self._client.chat.completions.create(
             model=self._model,
-            temperature=self._default_temp if temperature is None else temperature,
             messages=[
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},
             ],
+            **self._temp_kwargs(temperature),
         )
         return (resp.choices[0].message.content or "").strip()
+
+    def _temp_kwargs(self, temperature: float | None) -> dict:
+        # Los modelos GPT-5.x de chat solo admiten temperature=1 (por defecto).
+        # Para máxima compatibilidad, solo enviamos temperature si es exactamente 1.
+        t = self._default_temp if temperature is None else temperature
+        return {"temperature": t} if t == 1 else {}
 
     def complete_json(self, system: str, user: str, temperature: float | None = None) -> dict:
         """Pide al modelo una respuesta en JSON y la parsea."""
         resp = self._client.chat.completions.create(
             model=self._model,
-            temperature=self._default_temp if temperature is None else temperature,
             response_format={"type": "json_object"},
             messages=[
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},
             ],
+            **self._temp_kwargs(temperature),
         )
         content = resp.choices[0].message.content or "{}"
         return json.loads(content)

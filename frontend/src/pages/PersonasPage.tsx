@@ -52,7 +52,9 @@ const EDU_ORDER = [
   "Otros",
 ];
 function normEdu(s?: string | null): string {
-  const t = (s ?? "").toLowerCase();
+  const v = (s ?? "").trim();
+  if (EDU_ORDER.includes(v)) return v; // ya es una categoría canónica
+  const t = v.toLowerCase();
   if (/m[aá]ster|posgrado|postgrado|doctor|phd|mba/.test(t)) return "Postgrado (máster/doctorado)";
   if (/formaci[oó]n profesional|\bfp\b|grado medio|ciclo formativo|t[eé]cnic/.test(t)) return "Formación Profesional (grado medio)";
   if (/universi|licenci|diplom|ingenier|\bgrado\b|grado superior|educaci[oó]n superior/.test(t)) return "Universitario (grado/diplomatura/FP superior)";
@@ -258,7 +260,13 @@ export default function PersonasPage() {
   return (
     <div className="w80">
       <div className="toolbar">
-        <h2 style={{ margin: 0, fontWeight: 400, fontSize: "2.6rem" }}>Población sintética</h2>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <h2 style={{ margin: 0, fontWeight: 400, fontSize: "2.6rem" }}>Población sintética</h2>
+          <p className="muted" style={{ margin: 0, maxWidth: 620, fontSize: "0.85rem" }}>
+            Perfiles modelados para reflejar la distribución real de la población española
+            (edad, sexo, comunidad y estudios). Estructura basada en INE 2024.
+          </p>
+        </div>
         {loaded
           ? <span className="muted">{filtered.length} de {personas.length}</span>
           : <span className="muted blink">Cargando…</span>}

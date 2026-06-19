@@ -79,7 +79,7 @@
   --text: #ededec;
   --text-dim: #b7b6b1;
   --muted: #7f7e78;
-  --accent: #ffffff;
+  --accent: #FAF9F5;          /* off-white cálido (sin blanco puro) */
   --accent-contrast: #141413; /* texto sobre --accent */
   --accent-blue: #5b8cff;
   --danger: #e5484d;
@@ -93,17 +93,17 @@
 
 /* Tema claro */
 :root[data-theme="light"] {
-  --bg: #ffffff;
-  --bg-2: #f4f5f7;
-  --panel: #ffffff;
-  --panel-2: #f1f2f4;
-  --border: #e4e6ea;
-  --border-strong: #cfd2d8;
+  --bg: #F0EEE6;            /* lienzo crema (sin blanco) */
+  --bg-2: #E8E6DC;
+  --panel: #FAF9F5;         /* fichas: off-white cálido */
+  --panel-2: #E8E6DC;
+  --border: #E3DACC;
+  --border-strong: #d6cbb6;
   --text: #15171c;
-  --text-dim: #3d424b;
-  --muted: #6b7079;
+  --text-dim: #43474f;
+  --muted: #6f6a60;
   --accent: #15171c;
-  --accent-contrast: #ffffff;
+  --accent-contrast: #FAF9F5;
   --accent-blue: #2f6bff;
   --danger: #d22d33;
 }

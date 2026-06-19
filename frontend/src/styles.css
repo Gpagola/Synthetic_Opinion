@@ -376,6 +376,12 @@ tbody tr:hover { background: var(--bg-2); }
   background: linear-gradient(90deg, #1d4ed8 0%, #2f6bff 45%, #38bdf8 100%);
   border-radius: 7px;
 }
+.bar-row:hover .bar-label { color: var(--text); }
+.bar-row.active .bar-label { color: var(--accent-blue); font-weight: 500; }
+.donut-leg-row:hover { color: var(--text); }
+.donut-leg-row.active { color: var(--accent-blue); font-weight: 500; }
+.pyr-row:hover { background: var(--bg-2); }
+.pyr-row.active .pyr-label { color: var(--accent-blue); font-weight: 600; }
 .bar-count {
   flex: 0 0 auto; color: var(--muted);
   font-family: var(--font-label); min-width: 5.5em; text-align: right;

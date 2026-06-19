@@ -59,6 +59,16 @@ const EDU_SHORT: Record<string, string> = {
   "Formación Profesional (grado medio)": "Formación Profesional",
   "Secundaria (1ª etapa / ESO)": "Secundaria",
 };
+// Qué comprende cada nivel (tooltip al pasar el ratón)
+const EDU_DESC: Record<string, string> = {
+  "Postgrado": "Máster y doctorado",
+  "Universitario": "Grado, diplomatura, licenciatura y FP de grado superior",
+  "Formación Profesional": "FP de grado medio (ciclo formativo)",
+  "Bachillerato": "Bachillerato (2ª etapa de secundaria)",
+  "Secundaria": "Primera etapa de secundaria / ESO",
+  "Primaria": "Educación primaria",
+  "Sin estudios": "Sin estudios o sin titulación",
+};
 
 function normEdu(s?: string | null): string {
   const v = (s ?? "").trim();
@@ -82,14 +92,24 @@ function topEntries(obj: Record<string, number>, n = 7): [string, number][] {
   return head;
 }
 
-function StatBars({ items, detail }: { items: [string, number][]; detail?: Record<string, string> }) {
+function StatBars({ items, detail, onSelect, selected }: {
+  items: [string, number][];
+  detail?: Record<string, string>;
+  onSelect?: (label: string) => void;
+  selected?: string;
+}) {
   const max = Math.max(1, ...items.map(([, c]) => c));
   const total = items.reduce((s, [, c]) => s + c, 0) || 1;
   return (
     <div className="bars">
       {items.length === 0 && <p className="muted">Sin datos.</p>}
       {items.map(([label, count]) => (
-        <div className="bar-row" key={label}>
+        <div
+          className={`bar-row${selected === label ? " active" : ""}`}
+          key={label}
+          onClick={onSelect ? () => onSelect(label) : undefined}
+          style={{ cursor: onSelect ? "pointer" : "default" }}
+        >
           <span className="bar-label" title={detail?.[label] ?? label}>{label}</span>
           <div className="bar-track"><div className="bar-fill" style={{ width: `${(count / max) * 100}%` }} /></div>
           <span className="bar-count">{count} · {Math.round((count / total) * 100)}%</span>
@@ -108,7 +128,11 @@ const GENDER_COLORS: Record<string, string> = {
   Mujer: "#06b6d4", Hombre: "#2f6bff", Otro: "#94a3b8",
 };
 
-function Donut({ items }: { items: [string, number][] }) {
+function Donut({ items, onSelect, selected }: {
+  items: [string, number][];
+  onSelect?: (label: string) => void;
+  selected?: string;
+}) {
   const total = items.reduce((s, [, c]) => s + c, 0) || 1;
   const r = 62;
   const C = 2 * Math.PI * r;
@@ -137,7 +161,12 @@ function Donut({ items }: { items: [string, number][] }) {
       </svg>
       <div className="donut-legend">
         {items.map(([label, count]) => (
-          <div className="donut-leg-row" key={label}>
+          <div
+            className={`donut-leg-row${selected === label ? " active" : ""}`}
+            key={label}
+            onClick={onSelect ? () => onSelect(label) : undefined}
+            style={{ cursor: onSelect ? "pointer" : "default" }}
+          >
             <i style={{ background: GENDER_COLORS[label] ?? "#888" }} />
             <span>{label}</span>
             <span className="muted">{count} · {Math.round((count / total) * 100)}%</span>
@@ -148,7 +177,11 @@ function Donut({ items }: { items: [string, number][] }) {
   );
 }
 
-function Pyramid({ data }: { data: PyrRow[] }) {
+function Pyramid({ data, onSelect, selected }: {
+  data: PyrRow[];
+  onSelect?: (band: string) => void;
+  selected?: string;
+}) {
   const max = Math.max(
     1,
     ...data.map((d) => Math.max(d.Hombre_es + d.Hombre_ext, d.Mujer_es + d.Mujer_ext))
@@ -165,7 +198,12 @@ function Pyramid({ data }: { data: PyrRow[] }) {
         const hTot = d.Hombre_es + d.Hombre_ext;
         const mTot = d.Mujer_es + d.Mujer_ext;
         return (
-          <div className="pyr-row" key={d.band}>
+          <div
+            className={`pyr-row${selected === d.band ? " active" : ""}`}
+            key={d.band}
+            onClick={onSelect ? () => onSelect(d.band) : undefined}
+            style={{ cursor: onSelect ? "pointer" : "default" }}
+          >
             <div className="pyr-side left">
               <span className="pyr-n">{hTot || ""}</span>
               <div className="pyr-bar-group" style={{ width: `${(hTot / max) * 100}%` }}>
@@ -190,7 +228,7 @@ function Pyramid({ data }: { data: PyrRow[] }) {
 
 const EMPTY_FILTERS = {
   nombre: "", origen: "", residencia: "", ocupacion: "", tags: "", fuente: "", edadMin: "", edadMax: "",
-  region: "", provincia: "",
+  region: "", provincia: "", genero: "", ingresos: "", educacion: "",
 };
 
 export default function PersonasPage() {
@@ -230,6 +268,12 @@ export default function PersonasPage() {
     if (f.edadMax && (edad == null || edad > +f.edadMax)) return false;
     if (f.region && sd.region !== f.region) return false;
     if (f.provincia && (sd.codigo_postal ?? "").slice(0, 2) !== f.provincia) return false;
+    if (f.genero && normGenero(sd.genero) !== f.genero) return false;
+    if (f.ingresos && normIngreso(sd.ingresos) !== f.ingresos) return false;
+    if (f.educacion) {
+      const full = normEdu(sd.nivel_educativo);
+      if ((EDU_SHORT[full] ?? full) !== f.educacion) return false;
+    }
     return true;
   });
 
@@ -327,8 +371,23 @@ export default function PersonasPage() {
 
       <div className="stats-layout">
         <div className="stats-side">
-          <div className="card"><h3>Pirámide demográfica</h3><Pyramid data={stats.pyr} /></div>
-          <div className="card"><h3>Nivel de ingresos</h3><StatBars items={stats.incItems} /></div>
+          <div className="card"><h3>Pirámide demográfica</h3>
+            <Pyramid
+              data={stats.pyr}
+              selected={AGE_BANDS.find(([, lo, hi]) => String(lo) === f.edadMin && String(hi) === f.edadMax)?.[0] ?? ""}
+              onSelect={(band) => {
+                const b = AGE_BANDS.find((x) => x[0] === band);
+                if (!b) return;
+                setF((p) => (String(b[1]) === p.edadMin && String(b[2]) === p.edadMax)
+                  ? { ...p, edadMin: "", edadMax: "" }
+                  : { ...p, edadMin: String(b[1]), edadMax: String(b[2]) });
+              }}
+            />
+          </div>
+          <div className="card"><h3>Nivel de ingresos</h3>
+            <StatBars items={stats.incItems} selected={f.ingresos}
+              onSelect={(l) => setF((p) => ({ ...p, ingresos: p.ingresos === l ? "" : l }))} />
+          </div>
         </div>
         <div className="stats-center">
           <div className="card"><h3>Distribución territorial</h3>
@@ -345,8 +404,14 @@ export default function PersonasPage() {
           </div>
         </div>
         <div className="stats-side">
-          <div className="card"><h3>Género</h3><Donut items={stats.genItems} /></div>
-          <div className="card"><h3>Nivel de educación</h3><StatBars items={stats.eduItems} detail={stats.eduDetail} /></div>
+          <div className="card"><h3>Género</h3>
+            <Donut items={stats.genItems} selected={f.genero}
+              onSelect={(l) => setF((p) => ({ ...p, genero: p.genero === l ? "" : l }))} />
+          </div>
+          <div className="card"><h3>Nivel de educación</h3>
+            <StatBars items={stats.eduItems} detail={EDU_DESC} selected={f.educacion}
+              onSelect={(l) => setF((p) => ({ ...p, educacion: p.educacion === l ? "" : l }))} />
+          </div>
         </div>
       </div>
 

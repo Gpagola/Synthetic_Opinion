@@ -51,9 +51,15 @@ function mix(a: number[], b: number[], t: number): string {
 export default function SpainChoropleth({
   byRegion,
   byProvince,
+  selectedRegion,
+  selectedProvince,
+  onSelect,
 }: {
   byRegion: Record<string, number>;
   byProvince: Record<string, number>;
+  selectedRegion?: string;
+  selectedProvince?: string;
+  onSelect?: (kind: "ccaa" | "prov", key: string, label: string) => void;
 }) {
   const [level, setLevel] = useState<"ccaa" | "prov">("ccaa");
   const [hover, setHover] = useState<{ label: string; n: number } | null>(null);
@@ -63,6 +69,7 @@ export default function SpainChoropleth({
   const isC = level === "ccaa";
   const g = isC ? CCAA : PROV;
   const counts = isC ? byRegion : byProvince;
+  const selectedKey = isC ? selectedRegion : selectedProvince;
   const keyOf = (f: any) => (isC ? CODE2REGION[f.id] ?? f.properties?.name ?? "" : f.id);
   const labelOf = (f: any) => (isC ? CODE2REGION[f.id] ?? f.properties?.name : f.properties?.name) ?? "";
   const max = Math.max(1, ...Object.values(counts));
@@ -75,18 +82,21 @@ export default function SpainChoropleth({
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: "block" }}>
         {g.fc.features.map((f: any) => {
-          const n = counts[keyOf(f)] ?? 0;
+          const key = keyOf(f);
+          const n = counts[key] ?? 0;
           const t = n ? n / max : 0;
+          const sel = !!selectedKey && key === selectedKey;
           return (
             <path
               key={f.id}
               d={g.path(f) ?? ""}
               fill={mix(ramp.min, ramp.max, t)}
-              stroke="var(--border-strong)"
-              strokeWidth={isC ? 0.4 : 0.25}
-              style={{ transition: "fill 0.15s" }}
+              stroke={sel ? "var(--text)" : "var(--border-strong)"}
+              strokeWidth={sel ? 1.4 : isC ? 0.4 : 0.25}
+              style={{ transition: "fill 0.15s", cursor: onSelect ? "pointer" : "default" }}
               onMouseEnter={() => setHover({ label: labelOf(f), n })}
               onMouseLeave={() => setHover(null)}
+              onClick={() => onSelect?.(level, key, labelOf(f))}
             >
               <title>{`${labelOf(f)}: ${n}`}</title>
             </path>
@@ -96,8 +106,8 @@ export default function SpainChoropleth({
       </svg>
       <div className="muted" style={{ fontSize: "0.78rem", marginTop: 6, minHeight: "1.2em" }}>
         {hover
-          ? <span><strong style={{ color: "var(--text)" }}>{hover.label}</strong> · {hover.n} personas</span>
-          : <span>Pasa el ratón por {isC ? "una comunidad" : "una provincia"}</span>}
+          ? <span><strong style={{ color: "var(--text)" }}>{hover.label}</strong> · {hover.n} personas · clic para filtrar</span>
+          : <span>Clic en {isC ? "una comunidad" : "una provincia"} para filtrar</span>}
       </div>
     </div>
   );

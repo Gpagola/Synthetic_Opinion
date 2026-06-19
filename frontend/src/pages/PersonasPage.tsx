@@ -182,6 +182,7 @@ function Pyramid({ data }: { data: PyrRow[] }) {
 
 const EMPTY_FILTERS = {
   nombre: "", origen: "", residencia: "", ocupacion: "", tags: "", fuente: "", edadMin: "", edadMax: "",
+  region: "", provincia: "",
 };
 
 export default function PersonasPage() {
@@ -219,6 +220,8 @@ export default function PersonasPage() {
     const edad = sd.edad;
     if (f.edadMin && (edad == null || edad < +f.edadMin)) return false;
     if (f.edadMax && (edad == null || edad > +f.edadMax)) return false;
+    if (f.region && sd.region !== f.region) return false;
+    if (f.provincia && (sd.codigo_postal ?? "").slice(0, 2) !== f.provincia) return false;
     return true;
   });
 
@@ -318,7 +321,18 @@ export default function PersonasPage() {
           <div className="card"><h3>Nivel de ingresos</h3><StatBars items={stats.incItems} /></div>
         </div>
         <div className="stats-center">
-          <div className="card"><h3>Distribución territorial</h3><SpainChoropleth byRegion={stats.byRegion} byProvince={stats.byProvince} /></div>
+          <div className="card"><h3>Distribución territorial</h3>
+            <SpainChoropleth
+              byRegion={stats.byRegion}
+              byProvince={stats.byProvince}
+              selectedRegion={f.region}
+              selectedProvince={f.provincia}
+              onSelect={(kind, key) =>
+                setF((prev) => kind === "prov"
+                  ? { ...prev, provincia: prev.provincia === key ? "" : key, region: "" }
+                  : { ...prev, region: prev.region === key ? "" : key, provincia: "" })}
+            />
+          </div>
         </div>
         <div className="stats-side">
           <div className="card"><h3>Género</h3><Donut items={stats.genItems} /></div>

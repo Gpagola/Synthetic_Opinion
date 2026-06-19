@@ -52,6 +52,14 @@ const EDU_ORDER = [
   "Sin estudios",
   "Otros",
 ];
+// Etiqueta corta para el gráfico (el detalle completo va en el tooltip)
+const EDU_SHORT: Record<string, string> = {
+  "Postgrado (máster/doctorado)": "Postgrado",
+  "Universitario (grado/diplomatura/FP superior)": "Universitario",
+  "Formación Profesional (grado medio)": "Formación Profesional",
+  "Secundaria (1ª etapa / ESO)": "Secundaria",
+};
+
 function normEdu(s?: string | null): string {
   const v = (s ?? "").trim();
   if (EDU_ORDER.includes(v)) return v; // ya es una categoría canónica
@@ -74,7 +82,7 @@ function topEntries(obj: Record<string, number>, n = 7): [string, number][] {
   return head;
 }
 
-function StatBars({ items }: { items: [string, number][] }) {
+function StatBars({ items, detail }: { items: [string, number][]; detail?: Record<string, string> }) {
   const max = Math.max(1, ...items.map(([, c]) => c));
   const total = items.reduce((s, [, c]) => s + c, 0) || 1;
   return (
@@ -82,7 +90,7 @@ function StatBars({ items }: { items: [string, number][] }) {
       {items.length === 0 && <p className="muted">Sin datos.</p>}
       {items.map(([label, count]) => (
         <div className="bar-row" key={label}>
-          <span className="bar-label" title={label}>{label}</span>
+          <span className="bar-label" title={detail?.[label] ?? label}>{label}</span>
           <div className="bar-track"><div className="bar-fill" style={{ width: `${(count / max) * 100}%` }} /></div>
           <span className="bar-count">{count} · {Math.round((count / total) * 100)}%</span>
         </div>
@@ -264,8 +272,10 @@ export default function PersonasPage() {
       .filter((k) => gen[k])
       .map((k) => [k, gen[k]] as [string, number]);
     const incItems = INC_ORDER.filter((k) => inc[k]).map((k) => [k, inc[k]] as [string, number]);
-    const eduItems = EDU_ORDER.filter((k) => edu[k]).map((k) => [k, edu[k]] as [string, number]);
-    return { pyr, genItems, incItems, eduItems, byRegion: reg, byProvince: prov };
+    const eduFull = EDU_ORDER.filter((k) => edu[k]);
+    const eduItems = eduFull.map((k) => [EDU_SHORT[k] ?? k, edu[k]] as [string, number]);
+    const eduDetail = Object.fromEntries(eduFull.map((k) => [EDU_SHORT[k] ?? k, k]));
+    return { pyr, genItems, incItems, eduItems, eduDetail, byRegion: reg, byProvince: prov };
   })();
 
   return (
@@ -336,7 +346,7 @@ export default function PersonasPage() {
         </div>
         <div className="stats-side">
           <div className="card"><h3>Género</h3><Donut items={stats.genItems} /></div>
-          <div className="card"><h3>Nivel de educación</h3><StatBars items={stats.eduItems} /></div>
+          <div className="card"><h3>Nivel de educación</h3><StatBars items={stats.eduItems} detail={stats.eduDetail} /></div>
         </div>
       </div>
 

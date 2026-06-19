@@ -13,7 +13,9 @@ class Settings(BaseSettings):
 
     # OpenAI
     openai_api_key: str = ""
-    openai_model: str = "gpt-5.1-chat-latest"
+    openai_model: str = "gpt-4o"  # tareas sin razonamiento (personas, recruiting)
+    openai_reasoning_model: str = "gpt-5.5"  # focus group e informe
+    openai_reasoning_effort: str = "high"
     openai_temperature: float = 0.9
 
     # CORS

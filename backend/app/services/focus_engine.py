@@ -20,6 +20,7 @@ import random
 
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.database import SessionLocal
 from app.models import FocusGroup, Persona, Question, Response
 from app.services.llm import get_llm
@@ -212,8 +213,12 @@ def _answer(
         nombre=persona.nombre, idioma=idioma, perfil=_persona_perfil(persona)
     )
     user = _build_user_prompt(tema, transcript, pregunta, turno_previas, _estilo())
-    # Más temperatura para diversificar registro y longitud entre personas
-    return llm.complete_text(system, user, temperature=1.0)
+    # GPT-5.5 con razonamiento alto para respuestas más ricas y coherentes
+    return llm.complete_text(
+        system, user,
+        model=settings.openai_reasoning_model,
+        reasoning_effort=settings.openai_reasoning_effort,
+    )
 
 
 def answer_question(focus_group_id: int, question_id: int) -> None:

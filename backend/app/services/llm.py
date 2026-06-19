@@ -15,9 +15,11 @@ from app.config import settings
 
 
 class LLMProvider(Protocol):
-    def complete_text(self, system: str, user: str, temperature: float | None = None) -> str: ...
+    def complete_text(self, system: str, user: str, temperature: float | None = None,
+                      model: str | None = None, reasoning_effort: str | None = None) -> str: ...
 
-    def complete_json(self, system: str, user: str, temperature: float | None = None) -> dict: ...
+    def complete_json(self, system: str, user: str, temperature: float | None = None,
+                      model: str | None = None, reasoning_effort: str | None = None) -> dict: ...
 
 
 class OpenAIProvider:
@@ -28,33 +30,39 @@ class OpenAIProvider:
         self._model = settings.openai_model
         self._default_temp = settings.openai_temperature
 
-    def complete_text(self, system: str, user: str, temperature: float | None = None) -> str:
+    def _kwargs(self, temperature, model, reasoning_effort, json_mode):
+        kw = {"model": model or self._model}
+        if json_mode:
+            kw["response_format"] = {"type": "json_object"}
+        if reasoning_effort:
+            # Modelos de razonamiento (GPT-5.x): se envía reasoning_effort y NO temperature.
+            kw["reasoning_effort"] = reasoning_effort
+        else:
+            t = self._default_temp if temperature is None else temperature
+            if t is not None:
+                kw["temperature"] = t
+        return kw
+
+    def complete_text(self, system: str, user: str, temperature: float | None = None,
+                      model: str | None = None, reasoning_effort: str | None = None) -> str:
         resp = self._client.chat.completions.create(
-            model=self._model,
             messages=[
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},
             ],
-            **self._temp_kwargs(temperature),
+            **self._kwargs(temperature, model, reasoning_effort, False),
         )
         return (resp.choices[0].message.content or "").strip()
 
-    def _temp_kwargs(self, temperature: float | None) -> dict:
-        # Los modelos GPT-5.x de chat solo admiten temperature=1 (por defecto).
-        # Para máxima compatibilidad, solo enviamos temperature si es exactamente 1.
-        t = self._default_temp if temperature is None else temperature
-        return {"temperature": t} if t == 1 else {}
-
-    def complete_json(self, system: str, user: str, temperature: float | None = None) -> dict:
+    def complete_json(self, system: str, user: str, temperature: float | None = None,
+                      model: str | None = None, reasoning_effort: str | None = None) -> dict:
         """Pide al modelo una respuesta en JSON y la parsea."""
         resp = self._client.chat.completions.create(
-            model=self._model,
-            response_format={"type": "json_object"},
             messages=[
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},
             ],
-            **self._temp_kwargs(temperature),
+            **self._kwargs(temperature, model, reasoning_effort, True),
         )
         content = resp.choices[0].message.content or "{}"
         return json.loads(content)

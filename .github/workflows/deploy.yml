@@ -1,0 +1,64 @@
+name: Deploy to sb0
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-sb0
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Build frontend (base /personae/)
+        working-directory: frontend
+        run: |
+          npm ci
+          VITE_API_BASE=/personae/api npx vite build --base=/personae/
+
+      - name: Install ssh tools
+        run: sudo apt-get update && sudo apt-get install -y sshpass rsync
+
+      - name: Rsync project to server
+        env:
+          SSHPASS: ${{ secrets.SERVER_PASSWORD }}
+        run: |
+          sshpass -e rsync -az --delete \
+            --exclude '.git' --exclude '.github' --exclude 'node_modules' \
+            --exclude '.venv' --exclude 'venv' --exclude '__pycache__' \
+            --exclude '*.pyc' --exclude '.env' \
+            -e "ssh -o StrictHostKeyChecking=no" \
+            ./ "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/debian/Personae/"
+
+      - name: Rebuild & restart backend
+        env:
+          SSHPASS: ${{ secrets.SERVER_PASSWORD }}
+        run: |
+          sshpass -e ssh -o StrictHostKeyChecking=no \
+            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" 'bash -s' <<'REMOTE'
+          set -e
+          cd /home/debian/Personae/backend
+          docker build -t personae-backend .
+          docker rm -f personae-backend 2>/dev/null || true
+          docker run -d --name personae-backend --restart unless-stopped \
+            --env-file /home/debian/Personae/backend/.env \
+            -p 127.0.0.1:8010:8000 personae-backend
+          sleep 6
+          curl -sf http://127.0.0.1:8010/health && echo " [backend OK]"
+          REMOTE
+
+      - name: Smoke test público
+        run: |
+          curl -sf -o /dev/null -w "frontend /personae/ -> HTTP %{http_code}\n" https://sb0.braintrust-cs.com/personae/
+          curl -sf -w "\napi health -> %{http_code}\n" https://sb0.braintrust-cs.com/personae/api/health

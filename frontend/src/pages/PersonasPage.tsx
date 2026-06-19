@@ -309,14 +309,18 @@ export default function PersonasPage() {
         </div>
       </div>
 
-      <div className="stats-row3">
-        <div className="card"><h3>Pirámide demográfica</h3><Pyramid data={stats.pyr} /></div>
-        <div className="card"><h3>Distribución territorial</h3><SpainChoropleth counts={stats.byRegion} /></div>
-        <div className="card"><h3>Género</h3><Donut items={stats.genItems} /></div>
-      </div>
-      <div className="stats-grid">
-        <div className="card"><h3>Nivel de ingresos</h3><StatBars items={stats.incItems} /></div>
-        <div className="card"><h3>Nivel de educación</h3><StatBars items={stats.eduItems} /></div>
+      <div className="stats-layout">
+        <div className="stats-side">
+          <div className="card"><h3>Pirámide demográfica</h3><Pyramid data={stats.pyr} /></div>
+          <div className="card"><h3>Nivel de ingresos</h3><StatBars items={stats.incItems} /></div>
+        </div>
+        <div className="stats-center">
+          <div className="card"><h3>Distribución territorial</h3><SpainChoropleth counts={stats.byRegion} /></div>
+        </div>
+        <div className="stats-side">
+          <div className="card"><h3>Género</h3><Donut items={stats.genItems} /></div>
+          <div className="card"><h3>Nivel de educación</h3><StatBars items={stats.eduItems} /></div>
+        </div>
       </div>
 
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "1rem", marginTop: "1rem" }}>

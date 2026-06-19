@@ -75,6 +75,7 @@ function topEntries(obj: Record<string, number>, n = 7): [string, number][] {
 
 function StatBars({ items }: { items: [string, number][] }) {
   const max = Math.max(1, ...items.map(([, c]) => c));
+  const total = items.reduce((s, [, c]) => s + c, 0) || 1;
   return (
     <div className="bars">
       {items.length === 0 && <p className="muted">Sin datos.</p>}
@@ -82,7 +83,7 @@ function StatBars({ items }: { items: [string, number][] }) {
         <div className="bar-row" key={label}>
           <span className="bar-label" title={label}>{label}</span>
           <div className="bar-track"><div className="bar-fill" style={{ width: `${(count / max) * 100}%` }} /></div>
-          <span className="bar-count">{count}</span>
+          <span className="bar-count">{count} · {Math.round((count / total) * 100)}%</span>
         </div>
       ))}
     </div>

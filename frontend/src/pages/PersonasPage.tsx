@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, Persona, PersonaBase, GenerateParams } from "../api/client";
+import SpainChoropleth from "../components/SpainChoropleth";
 
 const emptyPersona = (): PersonaBase => ({
   nombre: "",
@@ -236,10 +237,13 @@ export default function PersonasPage() {
     const gen: Record<string, number> = {};
     const inc: Record<string, number> = {};
     const edu: Record<string, number> = {};
+    const reg: Record<string, number> = {};
     for (const p of filtered) {
       const sd = p.sociodemografico ?? {};
       const g = normGenero(sd.genero);
       gen[g] = (gen[g] || 0) + 1;
+      const rg = (sd.region ?? "").trim();
+      if (rg) reg[rg] = (reg[rg] || 0) + 1;
       const b = bandOf(sd.edad);
       if (b && (g === "Mujer" || g === "Hombre")) {
         const foreign = !!sd.pais_origen && sd.pais_origen.trim().toLowerCase() !== "españa";
@@ -255,7 +259,7 @@ export default function PersonasPage() {
       .map((k) => [k, gen[k]] as [string, number]);
     const incItems = INC_ORDER.filter((k) => inc[k]).map((k) => [k, inc[k]] as [string, number]);
     const eduItems = EDU_ORDER.filter((k) => edu[k]).map((k) => [k, edu[k]] as [string, number]);
-    return { pyr, genItems, incItems, eduItems };
+    return { pyr, genItems, incItems, eduItems, byRegion: reg };
   })();
 
   return (
@@ -305,9 +309,12 @@ export default function PersonasPage() {
         </div>
       </div>
 
-      <div className="stats-grid">
+      <div className="stats-row3">
         <div className="card"><h3>Pirámide demográfica</h3><Pyramid data={stats.pyr} /></div>
+        <div className="card"><h3>Distribución territorial</h3><SpainChoropleth counts={stats.byRegion} /></div>
         <div className="card"><h3>Género</h3><Donut items={stats.genItems} /></div>
+      </div>
+      <div className="stats-grid">
         <div className="card"><h3>Nivel de ingresos</h3><StatBars items={stats.incItems} /></div>
         <div className="card"><h3>Nivel de educación</h3><StatBars items={stats.eduItems} /></div>
       </div>

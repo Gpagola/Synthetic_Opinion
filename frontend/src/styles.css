@@ -342,6 +342,8 @@ tbody tr:hover { background: var(--bg-2); }
 /* ---------- Fichas de estadísticas ---------- */
 .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
 @media (max-width: 820px) { .stats-grid { grid-template-columns: 1fr; } }
+.stats-row3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1rem; }
+@media (max-width: 1000px) { .stats-row3 { grid-template-columns: 1fr; } }
 
 .bars { display: flex; flex-direction: column; gap: 6px; }
 .bar-row { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; }

@@ -27,9 +27,10 @@ const CCAA = build(ccaaTopo as any, "autonomous_regions");
 const PROV = build(provTopo as any, "provinces");
 
 // Rampa de azules por tema: el azul más oscuro queda en el MÁX (claro) y en el MÍN (oscuro)
+// El azul más oscuro de la rampa es #15171C (21,23,28)
 const RAMP: Record<string, { min: number[]; max: number[] }> = {
-  light: { min: [223, 234, 255], max: [9, 41, 112] },   // claro -> oscuro
-  dark: { min: [20, 40, 88], max: [132, 178, 255] },     // oscuro -> claro
+  light: { min: [223, 234, 255], max: [21, 23, 28] },   // claro -> oscuro (#15171C)
+  dark: { min: [21, 23, 28], max: [132, 178, 255] },    // oscuro (#15171C) -> claro
 };
 
 function useThemeName(): string {

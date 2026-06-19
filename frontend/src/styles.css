@@ -345,16 +345,12 @@ tbody tr:hover { background: var(--bg-2); }
 .stats-row3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1rem; }
 @media (max-width: 1000px) { .stats-row3 { grid-template-columns: 1fr; } }
 
-/* Mapa al centro con dos fichas apiladas a cada lado, todas a la misma altura */
-.stats-layout { display: grid; grid-template-columns: 1fr 1.2fr 1fr; gap: 1rem; align-items: stretch; }
+/* Mapa al centro con dos fichas apiladas a cada lado (altura natural, sin scroll) */
+.stats-layout { display: grid; grid-template-columns: 1fr 1.2fr 1fr; gap: 1rem; align-items: start; }
 .stats-side { display: flex; flex-direction: column; gap: 1rem; }
-.stats-side > .card { flex: 1 1 0; margin-bottom: 0; min-height: 0; overflow: auto; }
-.stats-center .card { height: 100%; margin-bottom: 0; display: flex; flex-direction: column; }
-.stats-center .card > div { flex: 1; display: flex; flex-direction: column; justify-content: center; }
-@media (max-width: 1000px) {
-  .stats-layout { grid-template-columns: 1fr; }
-  .stats-side > .card { flex: none; overflow: visible; }
-}
+.stats-side > .card { margin-bottom: 0; }
+.stats-center .card { margin-bottom: 0; }
+@media (max-width: 1000px) { .stats-layout { grid-template-columns: 1fr; } }
 
 .bars { display: flex; flex-direction: column; gap: 6px; }
 .bar-row { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; }

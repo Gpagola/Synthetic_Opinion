@@ -30,7 +30,7 @@ const PROV = build(provTopo as any, "provinces");
 // El azul de máxima intensidad coincide con el más oscuro de las barras: #1d4ed8
 const RAMP: Record<string, { min: number[]; max: number[] }> = {
   light: { min: [223, 233, 255], max: [29, 78, 216] },  // claro -> #1d4ed8
-  dark: { min: [33, 45, 74], max: [29, 78, 216] },       // azul tenue -> #1d4ed8
+  dark: { min: [30, 41, 66], max: [56, 189, 248] },      // azul tenue -> celeste #38bdf8
 };
 
 function useThemeName(): string {
@@ -62,7 +62,7 @@ export default function SpainChoropleth({
   selectedProvince?: string;
   onSelect?: (kind: "ccaa" | "prov", key: string, label: string) => void;
 }) {
-  const [level, setLevel] = useState<"ccaa" | "prov">("ccaa");
+  const [level, setLevel] = useState<"ccaa" | "prov">("prov");
   const [hover, setHover] = useState<{ label: string; n: number } | null>(null);
   const theme = useThemeName();
   const ramp = RAMP[theme] ?? RAMP.dark;

@@ -265,7 +265,7 @@ export default function PersonasPage() {
           <h2 style={{ margin: 0, fontWeight: 400, fontSize: "2.6rem" }}>Población sintética</h2>
           <p className="muted" style={{ margin: 0, maxWidth: 620, fontSize: "0.85rem" }}>
             Perfiles modelados para reflejar la distribución real de la población española
-            (edad, sexo, comunidad y estudios). Estructura basada en INE 2024.
+            adulta (mayor de 18 años) —edad, sexo, comunidad y estudios—. Estructura basada en INE 2024.
           </p>
         </div>
         {loaded
@@ -447,6 +447,9 @@ function PersonaEditor({
           <div><label>País de residencia</label>
             <input value={sd.pais_residencia ?? ""} onChange={(e) =>
               setP({ ...p, sociodemografico: { ...sd, pais_residencia: e.target.value } })} /></div>
+          <div><label>Código postal</label>
+            <input value={sd.codigo_postal ?? ""} onChange={(e) =>
+              setP({ ...p, sociodemografico: { ...sd, codigo_postal: e.target.value } })} /></div>
         </div>
         <div className="row">
           <div><label>Ocupación</label>

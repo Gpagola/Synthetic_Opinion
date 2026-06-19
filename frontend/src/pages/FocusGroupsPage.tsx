@@ -266,7 +266,8 @@ function PersonaPopover({ p }: { p: Persona }) {
       </div>
       <div className="muted" style={{ fontSize: "0.72rem" }}>
         vive en {sd.pais_residencia ?? "—"}
-        {sd.pais_origen && sd.pais_origen !== sd.pais_residencia ? ` (origen: ${sd.pais_origen})` : ""}
+        {sd.codigo_postal ? ` (CP ${sd.codigo_postal})` : ""}
+        {sd.pais_origen && sd.pais_origen !== sd.pais_residencia ? ` · origen: ${sd.pais_origen}` : ""}
         {sd.nivel_educativo ? ` · ${sd.nivel_educativo}` : ""}
       </div>
       {p.bio && <p style={{ margin: "7px 0 0", fontSize: "0.78rem", lineHeight: 1.45 }}>{p.bio}</p>}

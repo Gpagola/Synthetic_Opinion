@@ -7,6 +7,7 @@ export interface Sociodemografico {
   pais_origen?: string | null;
   pais_residencia?: string | null;
   region?: string | null;
+  codigo_postal?: string | null;
   nivel_educativo?: string | null;
   ingresos?: string | null;
   ocupacion?: string | null;

@@ -9,6 +9,7 @@ class Sociodemografico(BaseModel):
     pais_origen: str | None = None
     pais_residencia: str | None = None
     region: str | None = None
+    codigo_postal: str | None = None
     nivel_educativo: str | None = None
     ingresos: str | None = None
     ocupacion: str | None = None

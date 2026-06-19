@@ -42,16 +42,22 @@ function normIngreso(s?: string | null): string {
 
 // Niveles de educación canónicos, ordenados de menor a mayor (Otros al final)
 const EDU_ORDER = [
-  "Postgrado", "Universitario", "Formación Profesional", "Bachillerato",
-  "Secundaria", "Primaria", "Sin estudios", "Otros",
+  "Postgrado (máster/doctorado)",
+  "Universitario (grado/diplomatura/FP superior)",
+  "Formación Profesional (grado medio)",
+  "Bachillerato",
+  "Secundaria (1ª etapa / ESO)",
+  "Primaria",
+  "Sin estudios",
+  "Otros",
 ];
 function normEdu(s?: string | null): string {
   const t = (s ?? "").toLowerCase();
-  if (/m[aá]ster|posgrado|postgrado|doctor|phd|mba/.test(t)) return "Postgrado";
-  if (/formaci[oó]n profesional|\bfp\b|grado medio|grado superior|ciclo formativo|t[eé]cnic/.test(t)) return "Formación Profesional";
-  if (/universi|licenci|diplom|ingenier|\bgrado\b|educaci[oó]n superior/.test(t)) return "Universitario";
+  if (/m[aá]ster|posgrado|postgrado|doctor|phd|mba/.test(t)) return "Postgrado (máster/doctorado)";
+  if (/formaci[oó]n profesional|\bfp\b|grado medio|ciclo formativo|t[eé]cnic/.test(t)) return "Formación Profesional (grado medio)";
+  if (/universi|licenci|diplom|ingenier|\bgrado\b|grado superior|educaci[oó]n superior/.test(t)) return "Universitario (grado/diplomatura/FP superior)";
   if (/bachiller|\bbup\b|\bcou\b/.test(t)) return "Bachillerato";
-  if (/secundaria|\beso\b|graduado escolar/.test(t)) return "Secundaria";
+  if (/secundaria|\beso\b|graduado escolar/.test(t)) return "Secundaria (1ª etapa / ESO)";
   if (/primaria|primarios|\begb\b/.test(t)) return "Primaria";
   if (/sin estudios|ninguno|analfabet|sin formaci/.test(t)) return "Sin estudios";
   return "Otros";

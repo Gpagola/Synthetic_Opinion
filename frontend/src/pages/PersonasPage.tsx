@@ -290,7 +290,14 @@ export default function PersonasPage() {
         </div>
       </div>
 
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "1rem" }}>
+      <div className="stats-grid">
+        <div className="card"><h3>Pirámide demográfica</h3><Pyramid data={stats.pyr} /></div>
+        <div className="card"><h3>Género</h3><Donut items={stats.genItems} /></div>
+        <div className="card"><h3>Nivel de ingresos</h3><StatBars items={stats.incItems} /></div>
+        <div className="card"><h3>Nivel de educación</h3><StatBars items={stats.eduItems} /></div>
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "1rem", marginTop: "1rem" }}>
         <button className="secondary" onClick={() => setListCollapsed((v) => !v)}>
           {listCollapsed ? "Mostrar lista" : "Ocultar lista · ver solo fichas"}
         </button>
@@ -342,13 +349,6 @@ export default function PersonasPage() {
         )}
       </div>
       )}
-
-      <div className="stats-grid">
-        <div className="card"><h3>Pirámide demográfica</h3><Pyramid data={stats.pyr} /></div>
-        <div className="card"><h3>Género</h3><Donut items={stats.genItems} /></div>
-        <div className="card"><h3>Nivel de ingresos</h3><StatBars items={stats.incItems} /></div>
-        <div className="card"><h3>Nivel de educación</h3><StatBars items={stats.eduItems} /></div>
-      </div>
 
       {editing && (
         <PersonaEditor

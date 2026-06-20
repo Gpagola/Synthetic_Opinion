@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter, Navigate, Route, Routes, NavLink } from "react-router-dom";
 import PersonasPage from "./pages/PersonasPage";
 import FocusGroupsPage from "./pages/FocusGroupsPage";
+import HelpModal from "./components/HelpModal";
 import "./styles.css";
 
 function ThemeToggle() {
@@ -53,6 +54,7 @@ function Logo() {
 }
 
 function Layout() {
+  const [help, setHelp] = useState(false);
   return (
     <div className="app">
       <header className="topbar">
@@ -69,9 +71,19 @@ function Layout() {
           <span className="credit">
             Desarrollado por Braintrust CS firma miembro de Andersen Consulting
           </span>
+          <button className="help-btn" onClick={() => setHelp(true)} title="Ayuda">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="9.5" />
+              <path d="M9.2 9.2a2.8 2.8 0 0 1 5.4 1c0 1.8-2.6 2.2-2.6 4" />
+              <circle cx="12" cy="17.4" r="0.6" fill="currentColor" />
+            </svg>
+            Ayuda
+          </button>
           <ThemeToggle />
         </div>
       </header>
+      {help && <HelpModal onClose={() => setHelp(false)} />}
       <main className="content">
         <Routes>
           <Route path="/" element={<Navigate to="/personas" replace />} />

@@ -59,6 +59,43 @@ def weighted(options):
     return random.choices(vals, weights=weights, k=1)[0]
 
 
+# % de población nacida en el extranjero por comunidad (aprox. INE 2024)
+FOREIGN_SHARE = {
+    "Islas Baleares": 0.27, "Cataluña": 0.22, "Comunidad de Madrid": 0.22,
+    "Canarias": 0.22, "Comunidad Valenciana": 0.21, "Región de Murcia": 0.18,
+    "La Rioja": 0.17, "Aragón": 0.16, "Navarra": 0.16, "Andalucía": 0.12,
+    "Castilla-La Mancha": 0.12, "País Vasco": 0.11, "Cantabria": 0.09,
+    "Castilla y León": 0.09, "Principado de Asturias": 0.07, "Galicia": 0.07,
+    "Extremadura": 0.05,
+}
+# Mezcla de país de origen entre los nacidos fuera (aprox. principales colectivos)
+FOREIGN_COUNTRIES = [
+    ("Marruecos", 15), ("Rumanía", 9), ("Colombia", 9), ("Venezuela", 7),
+    ("Reino Unido", 5), ("Italia", 5), ("China", 4), ("Ecuador", 4),
+    ("Argentina", 4), ("Perú", 3), ("Honduras", 3), ("Ucrania", 3),
+    ("Bulgaria", 2), ("Alemania", 2), ("Francia", 2), ("Senegal", 2),
+    ("Bolivia", 2), ("Pakistán", 2), ("Portugal", 2), ("Brasil", 2),
+]
+
+
+def _age_factor(edad: int) -> float:
+    # Los nacidos fuera se concentran en edad laboral
+    if edad < 25:
+        return 1.0
+    if edad <= 49:
+        return 1.35
+    if edad <= 64:
+        return 0.8
+    return 0.35
+
+
+def _origin(region: str, edad: int) -> str:
+    p = FOREIGN_SHARE.get(region, 0.10) * _age_factor(edad)
+    if random.random() < min(p, 0.92):
+        return weighted(FOREIGN_COUNTRIES)
+    return "España"
+
+
 def _band_index(edad) -> int | None:
     if edad is None:
         return None
@@ -147,11 +184,13 @@ def build_slots():
     for (bi, g), n in alloc.items():
         _, lo, hi, _, _ = BANDS[bi]
         for _ in range(n):
+            edad = random.randint(lo, hi)
+            region = weighted(REGIONES)
             slots.append({
-                "edad": random.randint(lo, hi),
+                "edad": edad,
                 "genero": g,
-                "region": weighted(REGIONES),
-                "pais_origen": weighted(ORIGEN),
+                "region": region,
+                "pais_origen": _origin(region, edad),
                 "orientacion_politica": weighted(POLITICA),
             })
     random.shuffle(slots)

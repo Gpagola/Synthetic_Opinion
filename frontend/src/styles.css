@@ -246,6 +246,23 @@ a { color: inherit; }
 }
 .theme-toggle:hover { background: var(--panel-2); color: var(--text); opacity: 1; }
 
+.help-btn {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  background: transparent; color: var(--text-dim);
+  border: 1px solid var(--border-strong); border-radius: var(--radius);
+  height: 34px; padding: 0 0.7rem; margin-left: 0.85rem;
+  font-size: 0.78rem; letter-spacing: 0.04em; flex: 0 0 auto;
+}
+.help-btn:hover { background: var(--panel-2); color: var(--text); opacity: 1; }
+
+.help-modal { width: 720px; }
+.help-modal h3 {
+  margin: 1.1rem 0 0.4rem; font-size: 0.78rem; letter-spacing: 0.09em;
+  text-transform: uppercase; color: var(--accent-blue);
+}
+.help-list { margin: 0; padding-left: 1.1rem; }
+.help-list li { font-size: 0.86rem; line-height: 1.5; margin-bottom: 0.35rem; }
+
 .content { padding: 1.75rem 0; max-width: none; margin: 0; }
 
 /* ---------- Cards ---------- */

@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter, Navigate, Route, Routes, NavLink } from "react-router-dom";
 import PersonasPage from "./pages/PersonasPage";
 import FocusGroupsPage from "./pages/FocusGroupsPage";
+import SurveysPage from "./pages/SurveysPage";
 import HelpModal from "./components/HelpModal";
 import "./styles.css";
 
@@ -66,6 +67,7 @@ function Layout() {
           <nav>
             <NavLink to="/personas">Población sintética</NavLink>
             <NavLink to="/focus-groups">Focus Groups</NavLink>
+            <NavLink to="/surveys">Encuestas</NavLink>
           </nav>
           <div style={{ flex: 1 }} />
           <span className="credit">
@@ -89,6 +91,7 @@ function Layout() {
           <Route path="/" element={<Navigate to="/personas" replace />} />
           <Route path="/personas" element={<PersonasPage />} />
           <Route path="/focus-groups" element={<FocusGroupsPage />} />
+          <Route path="/surveys" element={<SurveysPage />} />
         </Routes>
       </main>
     </div>

@@ -116,6 +116,52 @@ export interface Report {
   generated_at: string;
 }
 
+// ---------- Encuestas ----------
+export interface SurveyQuestion {
+  id: number;
+  texto: string;
+  tipo: string; // single | multiple | yesno | likert | nps
+  opciones: string[];
+  orden: number;
+  obligatoria: boolean;
+}
+export interface Survey {
+  id: number;
+  nombre: string;
+  tema: string;
+  descripcion: string;
+  idioma: string;
+  estado: string;
+  modelo: string;
+  reasoning_effort?: string | null;
+  error_msg?: string | null;
+  created_at: string;
+  questions: SurveyQuestion[];
+}
+export interface QuestionIn {
+  texto: string;
+  tipo: string;
+  opciones: string[];
+  obligatoria?: boolean;
+}
+export interface OptionStat { opcion: string; n: number; pct: number; }
+export interface QuestionResult {
+  question_id: number;
+  texto: string;
+  tipo: string;
+  n: number;
+  distribucion: OptionStat[];
+  media?: number | null;
+  nps?: number | null;
+  cruce: Record<string, OptionStat[]>;
+}
+export interface SurveyResults {
+  estado: string;
+  total_respuestas: number;
+  break_var: string | null;
+  preguntas: QuestionResult[];
+}
+
 async function req<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     headers: { "Content-Type": "application/json" },
@@ -190,4 +236,24 @@ export const api = {
     req<void>(`/focus-groups/${id}/report`, { method: "DELETE" }),
   exportUrl: (id: number, format: "pdf" | "docx" | "xlsx") =>
     `${BASE}/focus-groups/${id}/report/export?format=${format}`,
+
+  // Encuestas
+  listSurveys: () => req<Survey[]>("/surveys"),
+  createSurvey: (s: Partial<Survey>) =>
+    req<Survey>("/surveys", { method: "POST", body: JSON.stringify(s) }),
+  getSurvey: (id: number) => req<Survey>(`/surveys/${id}`),
+  deleteSurvey: (id: number) => req<void>(`/surveys/${id}`, { method: "DELETE" }),
+  setSurveyQuestions: (id: number, questions: QuestionIn[]) =>
+    req<Survey>(`/surveys/${id}/questions`, { method: "POST", body: JSON.stringify({ questions }) }),
+  launchSurvey: (id: number, persona_ids: number[], modelo: string, reasoning_effort: string | null) =>
+    req<{ estado: string }>(`/surveys/${id}/launch`, {
+      method: "POST",
+      body: JSON.stringify({ persona_ids, modelo, reasoning_effort }),
+    }),
+  surveyStatus: (id: number) =>
+    req<{ estado: string; total: number; respondidas: number; error_msg?: string | null }>(
+      `/surveys/${id}/status`),
+  surveyResults: (id: number, breakVar: string) =>
+    req<SurveyResults>(`/surveys/${id}/results${breakVar ? `?break_var=${breakVar}` : ""}`),
+  surveyExportUrl: (id: number) => `${BASE}/surveys/${id}/export`,
 };

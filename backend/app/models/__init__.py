@@ -6,6 +6,7 @@ from app.models.focus_group import (
     Response,
     Report,
 )
+from app.models.survey import Survey, SurveyQuestion, SurveyResponse
 
 __all__ = [
     "Persona",
@@ -14,4 +15,7 @@ __all__ = [
     "Question",
     "Response",
     "Report",
+    "Survey",
+    "SurveyQuestion",
+    "SurveyResponse",
 ]

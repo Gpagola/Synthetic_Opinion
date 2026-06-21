@@ -11,6 +11,7 @@ from __future__ import annotations
 import io
 import json
 from concurrent.futures import ThreadPoolExecutor
+from types import SimpleNamespace
 
 from openpyxl import Workbook
 from sqlalchemy.orm import Session
@@ -136,23 +137,33 @@ def answer_survey(survey_id: int, persona_ids: list[int], modelo: str,
             p.id: p for p in db.query(Persona).filter(Persona.id.in_(persona_ids)).all()
         }
         ordered = [personas[i] for i in persona_ids if i in personas]
-        questions = list(survey.questions)
+        idioma = survey.idioma
         prompt = _build_prompt(survey)
+        # Specs de preguntas como objetos planos para validar sin tocar la sesión.
+        questions = [SimpleNamespace(id=q.id, tipo=q.tipo, opciones=list(q.opciones))
+                     for q in survey.questions]
+        # IMPORTANTE: materializamos todos los datos de persona AQUÍ (hilo principal).
+        # Tras los commits, los objetos ORM se expiran; si los hilos accedieran a sus
+        # atributos dispararían lazy-loads concurrentes sobre la misma conexión MySQL
+        # ("Packet sequence number wrong"). Los hilos solo reciben datos planos.
+        items = [(p.id, p.nombre, _perfil(p), _snapshot(p)) for p in ordered]
         llm = get_llm()
 
-        def ask(p: Persona):
+        def ask(item):
+            pid, nombre, perfil, _snap = item
             system = (
-                f"Eres {p.nombre}, una persona real que participa en una encuesta. Respondes en tu "
-                f"personaje, en {survey.idioma}. Responde SIEMPRE en JSON válido.\n\nTu perfil:\n{_perfil(p)}"
+                f"Eres {nombre}, una persona real que participa en una encuesta. Respondes en tu "
+                f"personaje, en {idioma}. Responde SIEMPRE en JSON válido.\n\nTu perfil:\n{perfil}"
             )
             try:
                 data = llm.complete_json(system, prompt, model=modelo, reasoning_effort=reasoning_effort)
-                return p, data.get("respuestas", {})
+                return pid, data.get("respuestas", {})
             except Exception:  # noqa: BLE001
-                return p, None
+                return pid, None
 
+        snapshots = {pid: snap for pid, _n, _p, snap in items}
         with ThreadPoolExecutor(max_workers=8) as ex:
-            for i, (p, raw) in enumerate(ex.map(ask, ordered), 1):
+            for i, (pid, raw) in enumerate(ex.map(ask, items), 1):
                 if raw is None:
                     continue
                 resp = {}
@@ -161,8 +172,8 @@ def answer_survey(survey_id: int, persona_ids: list[int], modelo: str,
                     if v is not None:
                         resp[str(q.id)] = v
                 db.add(SurveyResponse(
-                    survey_id=survey_id, persona_id=p.id,
-                    snapshot=_snapshot(p), respuestas=resp,
+                    survey_id=survey_id, persona_id=pid,
+                    snapshot=snapshots.get(pid), respuestas=resp,
                 ))
                 if i % 20 == 0:
                     db.commit()

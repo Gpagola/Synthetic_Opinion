@@ -65,8 +65,8 @@ function Layout() {
             <span className="brand-name">Personæ</span>
           </div>
           <nav>
-            <NavLink to="/personas">Población sintética</NavLink>
-            <NavLink to="/focus-groups">Focus Groups</NavLink>
+            <NavLink to="/personas">Población</NavLink>
+            <NavLink to="/focus-groups">Focus</NavLink>
             <NavLink to="/surveys">Encuestas</NavLink>
           </nav>
           <div style={{ flex: 1 }} />

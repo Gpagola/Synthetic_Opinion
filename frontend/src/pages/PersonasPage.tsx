@@ -231,11 +231,15 @@ const EMPTY_FILTERS = {
   region: "", provincia: "", genero: "", ingresos: "", educacion: "",
 };
 
+// Caché a nivel de módulo: persiste la población cargada entre navegaciones
+// (la página se desmonta al cambiar de pestaña, pero esto sobrevive).
+let personasCache: Persona[] | null = null;
+
 export default function PersonasPage() {
-  const [personas, setPersonas] = useState<Persona[]>([]);
-  const [loaded, setLoaded] = useState(false);
-  const [progress, setProgress] = useState(6);
-  const [showLoader, setShowLoader] = useState(true);
+  const [personas, setPersonas] = useState<Persona[]>(personasCache ?? []);
+  const [loaded, setLoaded] = useState(personasCache !== null);
+  const [progress, setProgress] = useState(personasCache !== null ? 100 : 6);
+  const [showLoader, setShowLoader] = useState(personasCache === null);
   const [editing, setEditing] = useState<(PersonaBase & { id?: number }) | null>(null);
   const [genOpen, setGenOpen] = useState(false);
   const [f, setF] = useState({ ...EMPTY_FILTERS });
@@ -245,9 +249,10 @@ export default function PersonasPage() {
 
   const load = () =>
     api.listPersonas()
-      .then((d) => { setPersonas(d); setLoaded(true); })
+      .then((d) => { personasCache = d; setPersonas(d); setLoaded(true); })
       .catch((e) => { console.error(e); setLoaded(true); });
-  useEffect(() => { load(); }, []);
+  // Solo carga si no hay caché previa; al volver de otra pestaña reutiliza lo cargado.
+  useEffect(() => { if (personasCache === null) load(); }, []);
   useEffect(() => { setPage(1); }, [f]);
 
   // Barra de progreso del popup: avanza mientras carga y se completa al llegar los datos.

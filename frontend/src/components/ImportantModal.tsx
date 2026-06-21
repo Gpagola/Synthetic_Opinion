@@ -30,6 +30,22 @@ export default function ImportantModal({ onClose }: { onClose: () => void }) {
             exploratorio, contrastándolo siempre que la decisión lo requiera.</li>
         </ul>
 
+        <h3>¿En qué casos es útil?</h3>
+        <ul className="help-list">
+          <li><strong>Pre-test rápido</strong> de conceptos, mensajes, naming, claims o packaging antes
+            de llevarlos a campo real.</li>
+          <li><strong>Depurar el instrumento.</strong> Afinar el cuestionario o la guía del focus
+            (orden, redacción, opciones) probándolo antes con la población sintética.</li>
+          <li><strong>Anticipar reacciones y objeciones</strong> de distintos segmentos
+            (edad, territorio, renta, origen…) y detectar puntos sensibles.</li>
+          <li><strong>Generar hipótesis e ideas</strong> en fases tempranas, cuando aún no hay
+            presupuesto o tiempo para trabajo de campo.</li>
+          <li><strong>Priorizar.</strong> Decidir qué preguntas, segmentos o líneas merecen la
+            investigación real posterior.</li>
+          <li><strong>Formación y demostración.</strong> Entrenar al equipo o ilustrar dinámicas y
+            resultados sin exponer datos de personas reales.</li>
+        </ul>
+
         <p className="muted" style={{ marginTop: "0.75rem" }}>
           Herramienta de uso interno de Braintrust CS.
         </p>

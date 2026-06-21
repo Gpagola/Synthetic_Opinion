@@ -255,6 +255,21 @@ a { color: inherit; }
 }
 .help-btn:hover { background: var(--panel-2); color: var(--text); opacity: 1; }
 
+/* Botón de aviso IMPORTANTE — acento ámbar para destacar */
+.important-btn {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  background: transparent; color: #d98324;
+  border: 1px solid #d98324; border-radius: var(--radius);
+  height: 34px; padding: 0 0.7rem; margin-left: 0.85rem;
+  font-size: 0.78rem; letter-spacing: 0.04em; flex: 0 0 auto; font-weight: 500;
+}
+.important-btn:hover { background: #d98324; color: var(--accent-contrast); opacity: 1; }
+
+.important-modal { width: 560px; }
+.important-modal .warn-ico { color: #d98324; }
+.important-modal h2 { font-size: 1.5rem; }
+.important-modal p { font-size: 0.9rem; line-height: 1.55; }
+
 .help-modal { width: 720px; }
 .help-modal h3 {
   margin: 1.1rem 0 0.4rem; font-size: 0.78rem; letter-spacing: 0.09em;

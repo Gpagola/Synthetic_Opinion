@@ -5,6 +5,7 @@ import PersonasPage from "./pages/PersonasPage";
 import FocusGroupsPage from "./pages/FocusGroupsPage";
 import SurveysPage from "./pages/SurveysPage";
 import HelpModal from "./components/HelpModal";
+import ImportantModal from "./components/ImportantModal";
 import "./styles.css";
 
 function ThemeToggle() {
@@ -56,6 +57,7 @@ function Logo() {
 
 function Layout() {
   const [help, setHelp] = useState(false);
+  const [important, setImportant] = useState(false);
   return (
     <div className="app">
       <header className="topbar">
@@ -73,6 +75,14 @@ function Layout() {
           <span className="credit">
             Desarrollado por Braintrust CS firma miembro de Andersen Consulting
           </span>
+          <button className="important-btn" onClick={() => setImportant(true)} title="Aviso importante">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M10.3 3.2 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.2a2 2 0 0 0-3.4 0z" />
+              <path d="M12 9v4" /><path d="M12 17h.01" />
+            </svg>
+            Importante
+          </button>
           <button className="help-btn" onClick={() => setHelp(true)} title="Ayuda">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
               strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -86,6 +96,7 @@ function Layout() {
         </div>
       </header>
       {help && <HelpModal onClose={() => setHelp(false)} />}
+      {important && <ImportantModal onClose={() => setImportant(false)} />}
       <main className="content">
         <Routes>
           <Route path="/" element={<Navigate to="/personas" replace />} />

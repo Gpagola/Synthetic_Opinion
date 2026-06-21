@@ -154,6 +154,7 @@ export interface QuestionResult {
   media?: number | null;
   nps?: number | null;
   cruce: Record<string, OptionStat[]>;
+  textos?: string[];
 }
 export interface SurveyResults {
   estado: string;

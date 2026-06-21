@@ -70,6 +70,8 @@ def _q_spec(q) -> str:
         return 'entero del 1 (muy en desacuerdo) al 5 (muy de acuerdo)'
     if q.tipo == "nps":
         return 'entero del 0 al 10 (¿qué probabilidad de recomendarlo?)'
+    if q.tipo == "abierta":
+        return 'responde con texto libre (1-2 frases) en tu propia voz, como string'
     return ""
 
 
@@ -109,6 +111,9 @@ def _validate(q, raw):
         except (ValueError, TypeError):
             return None
         return max(1, min(5, v)) if q.tipo == "likert" else max(0, min(10, v))
+    if q.tipo == "abierta":
+        s = str(raw).strip()
+        return s or None
     return None
 
 
@@ -230,6 +235,14 @@ def compute_results(db: Session, survey: Survey, break_var: str | None) -> dict:
     preguntas = []
     for q in survey.questions:
         vals = [r.respuestas.get(str(q.id)) for r in responses if r.respuestas.get(str(q.id)) is not None]
+        # Las preguntas abiertas no tienen distribución: se devuelven los verbatims.
+        if q.tipo == "abierta":
+            textos = [str(v) for v in vals]
+            preguntas.append({
+                "question_id": q.id, "texto": q.texto, "tipo": q.tipo, "n": len(textos),
+                "distribucion": [], "media": None, "nps": None, "cruce": {}, "textos": textos,
+            })
+            continue
         dist, n = _distrib(q, vals)
         media = None
         nps = None
@@ -253,7 +266,7 @@ def compute_results(db: Session, survey: Survey, break_var: str | None) -> dict:
                 cruce[seg] = _distrib(q, sv)[0]
         preguntas.append({
             "question_id": q.id, "texto": q.texto, "tipo": q.tipo, "n": n,
-            "distribucion": dist, "media": media, "nps": nps, "cruce": cruce,
+            "distribucion": dist, "media": media, "nps": nps, "cruce": cruce, "textos": [],
         })
     return {
         "estado": survey.estado, "total_respuestas": len(responses),
@@ -283,6 +296,12 @@ def export_xlsx(db: Session, survey: Survey) -> bytes:
     ws2 = wb.create_sheet("Resultados")
     for q in res["preguntas"]:
         ws2.append([q["texto"]])
+        if q["tipo"] == "abierta":
+            ws2.append([f"Respuestas abiertas (n={q['n']})"])
+            for t in q.get("textos", []):
+                ws2.append([t])
+            ws2.append([])
+            continue
         ws2.append(["Opción", "N", "%"])
         for o in q["distribucion"]:
             ws2.append([o["opcion"], o["n"], o["pct"]])

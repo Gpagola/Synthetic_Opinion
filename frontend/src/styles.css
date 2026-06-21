@@ -557,6 +557,11 @@ tbody tr:hover { background: var(--bg-2); }
 }
 .loading-pct { font-size: 0.85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 .flex-between { display: flex; justify-content: space-between; align-items: center; }
+.verbatims { max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+.verbatim {
+  margin: 0; padding: 8px 12px; font-size: 0.9rem; color: var(--text);
+  background: var(--bg-2); border-left: 2px solid var(--accent-blue); border-radius: 6px;
+}
 .response { border-left: 2px solid var(--border-strong); padding-left: 0.75rem; margin: 0.5rem 0; }
 .response strong { color: var(--text); }
 .toolbar { display: flex; gap: 0.6rem; margin-bottom: 1.25rem; flex-wrap: wrap; align-items: center; }

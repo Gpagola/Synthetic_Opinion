@@ -82,6 +82,7 @@ class QuestionResult(BaseModel):
     nps: float | None = None    # solo nps
     # crosstab: {valor_segmento: [OptionStat,...]}
     cruce: dict[str, list[OptionStat]] = Field(default_factory=dict)
+    textos: list[str] = Field(default_factory=list)  # verbatims (preguntas abiertas)
 
 
 class ResultsOut(BaseModel):

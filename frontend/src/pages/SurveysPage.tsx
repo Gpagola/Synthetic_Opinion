@@ -7,8 +7,13 @@ const Q_TYPES = [
   { v: "yesno", label: "Sí / No" },
   { v: "likert", label: "Escala 1–5" },
   { v: "nps", label: "NPS 0–10" },
+  { v: "abierta", label: "Pregunta abierta" },
 ];
 const NEEDS_OPTIONS = new Set(["single", "multiple"]);
+
+// Pregunta en edición: guarda el texto crudo de opciones para no reformatear al teclear.
+type EditQ = QuestionIn & { opcText?: string };
+const splitOpts = (s: string) => s.split(",").map((x) => x.trim()).filter(Boolean);
 
 // Pirámide INE adultos 18+: [banda, min, max, % adultos, % mujeres]
 const BANDS: [string, number, number, number, number][] = [
@@ -126,7 +131,7 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
 function SurveyDetail({ id, onBack }: { id: number; onBack: () => void }) {
   const [survey, setSurvey] = useState<Survey | null>(null);
   const [personas, setPersonas] = useState<Persona[]>([]);
-  const [questions, setQuestions] = useState<QuestionIn[]>([]);
+  const [questions, setQuestions] = useState<EditQ[]>([]);
   const [method, setMethod] = useState<"representativa" | "aleatoria" | "segmento">("representativa");
   const [N, setN] = useState(200);
   const [seg, setSeg] = useState({ region: "", genero: "", edadMin: "", edadMax: "" });
@@ -141,7 +146,7 @@ function SurveyDetail({ id, onBack }: { id: number; onBack: () => void }) {
   useEffect(() => {
     api.getSurvey(id).then((s) => {
       setSurvey(s); setEstado(s.estado);
-      setQuestions(s.questions.map((q) => ({ texto: q.texto, tipo: q.tipo, opciones: q.opciones, obligatoria: q.obligatoria })));
+      setQuestions(s.questions.map((q) => ({ texto: q.texto, tipo: q.tipo, opciones: q.opciones, obligatoria: q.obligatoria, opcText: q.opciones.join(", ") })));
       setModelo(s.modelo || "gpt-4o");
       if (s.estado === "completed") loadResults("");
     });
@@ -167,8 +172,15 @@ function SurveyDetail({ id, onBack }: { id: number; onBack: () => void }) {
 
   const saveQuestions = async () => {
     setSaving(true);
-    try { setSurvey(await api.setSurveyQuestions(id, questions)); }
-    finally { setSaving(false); }
+    try {
+      const payload: QuestionIn[] = questions.map((q) => ({
+        texto: q.texto,
+        tipo: q.tipo,
+        obligatoria: q.obligatoria,
+        opciones: NEEDS_OPTIONS.has(q.tipo) ? splitOpts(q.opcText ?? q.opciones.join(", ")) : [],
+      }));
+      setSurvey(await api.setSurveyQuestions(id, payload));
+    } finally { setSaving(false); }
   };
   const loadResults = (bv: string) => api.surveyResults(id, bv).then(setResults).catch(() => {});
 
@@ -191,8 +203,8 @@ function SurveyDetail({ id, onBack }: { id: number; onBack: () => void }) {
     } catch (e) { alert("Error: " + (e as Error).message); setEstado("draft"); }
   };
 
-  const addQ = () => setQuestions([...questions, { texto: "", tipo: "single", opciones: ["", ""], obligatoria: true }]);
-  const updQ = (i: number, patch: Partial<QuestionIn>) => setQuestions(questions.map((q, j) => j === i ? { ...q, ...patch } : q));
+  const addQ = () => setQuestions([...questions, { texto: "", tipo: "single", opciones: [], obligatoria: true, opcText: "" }]);
+  const updQ = (i: number, patch: Partial<EditQ>) => setQuestions(questions.map((q, j) => j === i ? { ...q, ...patch } : q));
   const rmQ = (i: number) => setQuestions(questions.filter((_, j) => j !== i));
 
   if (!survey) return <div className="loading-center"><span className="spinner blink">Cargando…</span></div>;
@@ -223,9 +235,14 @@ function SurveyDetail({ id, onBack }: { id: number; onBack: () => void }) {
                   <button className="danger" style={{ flex: "0 0 auto" }} onClick={() => rmQ(i)}>✕</button>
                 </div>
                 {NEEDS_OPTIONS.has(q.tipo) && (
-                  <input style={{ marginTop: 6 }} placeholder="Opciones separadas por coma"
-                    value={q.opciones.join(", ")}
-                    onChange={(e) => updQ(i, { opciones: e.target.value.split(",").map((x) => x.trim()).filter(Boolean) })} />
+                  <input style={{ marginTop: 6 }} placeholder="Opciones separadas por coma (p. ej. Real Madrid, Barça, Atlético)"
+                    value={q.opcText ?? q.opciones.join(", ")}
+                    onChange={(e) => updQ(i, { opcText: e.target.value })} />
+                )}
+                {q.tipo === "abierta" && (
+                  <p className="muted" style={{ margin: "6px 0 0", fontSize: "0.8rem" }}>
+                    Respuesta de texto libre; cada persona contesta con sus palabras.
+                  </p>
                 )}
               </div>
             ))}
@@ -296,15 +313,24 @@ function SurveyDetail({ id, onBack }: { id: number; onBack: () => void }) {
                   {q.media != null && <span className="muted"> · media {q.media}</span>}
                   {q.nps != null && <span className="muted"> · NPS {q.nps}</span>}
                 </p>
-                <div className="bars">
-                  {q.distribucion.map((o) => (
-                    <div className="bar-row" key={o.opcion}>
-                      <span className="bar-label" title={o.opcion}>{o.opcion}</span>
-                      <div className="bar-track"><div className="bar-fill" style={{ width: `${o.pct}%` }} /></div>
-                      <span className="bar-count">{o.n} · {o.pct}%</span>
-                    </div>
-                  ))}
-                </div>
+                {q.tipo === "abierta" ? (
+                  <div className="verbatims">
+                    {(q.textos ?? []).map((t, k) => (
+                      <p className="verbatim" key={k}>“{t}”</p>
+                    ))}
+                    {(q.textos ?? []).length === 0 && <p className="muted">Sin respuestas.</p>}
+                  </div>
+                ) : (
+                  <div className="bars">
+                    {q.distribucion.map((o) => (
+                      <div className="bar-row" key={o.opcion}>
+                        <span className="bar-label" title={o.opcion}>{o.opcion}</span>
+                        <div className="bar-track"><div className="bar-fill" style={{ width: `${o.pct}%` }} /></div>
+                        <span className="bar-count">{o.n} · {o.pct}%</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 {results.break_var && Object.keys(q.cruce).length > 0 && (
                   <div className="table-card" style={{ marginTop: 8 }}>
                     <table>

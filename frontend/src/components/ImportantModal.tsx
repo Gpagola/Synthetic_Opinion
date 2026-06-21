@@ -18,32 +18,37 @@ export default function ImportantModal({ onClose }: { onClose: () => void }) {
           <strong>Personæ trabaja con poblaciones sintéticas generadas por inteligencia
           artificial</strong>, modeladas según datos del INE. Los perfiles son <strong>ficticios</strong>
           {" "}—no corresponden a personas reales ni contienen datos personales identificables— y sus
-          respuestas en focus groups y encuestas son <strong>opiniones simuladas</strong>.
+          respuestas en focus groups y encuestas son <strong>opiniones simuladas</strong>. Úsalo con
+          criterio profesional, como insumo cualitativo y exploratorio.
         </p>
 
+        <h3>Para qué es útil</h3>
         <ul className="help-list">
-          <li><strong>Para qué sirve.</strong> Explorar hipótesis, afinar preguntas, anticipar
-            reacciones y orientar el diseño de una investigación.</li>
-          <li><strong>Qué no es.</strong> No sustituye el trabajo de campo con personas reales ni debe
-            usarse como dato poblacional definitivo o evidencia concluyente.</li>
-          <li><strong>Cómo interpretarlo.</strong> Con criterio profesional, como insumo cualitativo y
-            exploratorio, contrastándolo siempre que la decisión lo requiera.</li>
+          <li><strong>Exploración y generación de hipótesis.</strong> Reacciones cualitativas tempranas
+            a un concepto, naming, claim o packaging; descubre objeciones y ángulos no anticipados.</li>
+          <li><strong>Pre-test y filtrado.</strong> Cribar muchos conceptos para decidir cuáles llevar a
+            campo real. Coste del error bajo, velocidad alta.</li>
+          <li><strong>Stress-test de instrumentos.</strong> Pasar guiones y cuestionarios por la
+            población sintética para detectar ambigüedades y sesgos antes de programar el campo.</li>
+          <li><strong>Formación y simulación interna.</strong> Entrenar equipos comerciales/producto,
+            ensayar objeciones, role-play por segmentos.</li>
+          <li><strong>Nichos inaccesibles.</strong> Primera aproximación direccional cuando reclutar el
+            segmento real es caro o lento.</li>
         </ul>
 
-        <h3>¿En qué casos es útil?</h3>
+        <h3 className="h3-danger">Para qué NO es útil (o es arriesgado)</h3>
         <ul className="help-list">
-          <li><strong>Pre-test rápido</strong> de conceptos, mensajes, naming, claims o packaging antes
-            de llevarlos a campo real.</li>
-          <li><strong>Depurar el instrumento.</strong> Afinar el cuestionario o la guía del focus
-            (orden, redacción, opciones) probándolo antes con la población sintética.</li>
-          <li><strong>Anticipar reacciones y objeciones</strong> de distintos segmentos
-            (edad, territorio, renta, origen…) y detectar puntos sensibles.</li>
-          <li><strong>Generar hipótesis e ideas</strong> en fases tempranas, cuando aún no hay
-            presupuesto o tiempo para trabajo de campo.</li>
-          <li><strong>Priorizar.</strong> Decidir qué preguntas, segmentos o líneas merecen la
-            investigación real posterior.</li>
-          <li><strong>Formación y demostración.</strong> Entrenar al equipo o ilustrar dinámicas y
-            resultados sin exponer datos de personas reales.</li>
+          <li><strong>Decisiones que dependen de magnitudes precisas.</strong> Sizing, share,
+            elasticidad de precio, forecast. Da cifras plausibles pero no calibradas.</li>
+          <li><strong>Temas fuera del entrenamiento o muy locales.</strong> Actitudes emergentes o
+            productos sin referente cultural: el modelo regresa a la media y aplana la varianza real
+            (desaparece la cola de opiniones minoritarias o extremas).</li>
+          <li><strong>Alto riesgo regulatorio, legal o reputacional.</strong> Pharma, finanzas, salud
+            pública, claims defendibles: se necesita evidencia real.</li>
+          <li><strong>Go/no-go de inversión.</strong> Nunca como única fuente para una decisión de gran
+            impacto.</li>
+          <li><strong>Emociones profundas, tabúes y la brecha decir-vs-hacer.</strong> Lo sintético
+            amplifica el sesgo de deseabilidad social.</li>
         </ul>
 
         <p className="muted" style={{ marginTop: "0.75rem" }}>

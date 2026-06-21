@@ -275,6 +275,7 @@ a { color: inherit; }
   margin: 1.1rem 0 0.4rem; font-size: 0.78rem; letter-spacing: 0.09em;
   text-transform: uppercase; color: var(--accent-blue);
 }
+.important-modal h3.h3-danger { color: #d92d20; }
 .important-modal p { font-size: 0.9rem; line-height: 1.55; }
 
 .help-modal { width: 720px; }

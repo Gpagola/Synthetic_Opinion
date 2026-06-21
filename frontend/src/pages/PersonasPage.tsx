@@ -234,6 +234,8 @@ const EMPTY_FILTERS = {
 export default function PersonasPage() {
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [progress, setProgress] = useState(6);
+  const [showLoader, setShowLoader] = useState(true);
   const [editing, setEditing] = useState<(PersonaBase & { id?: number }) | null>(null);
   const [genOpen, setGenOpen] = useState(false);
   const [f, setF] = useState({ ...EMPTY_FILTERS });
@@ -242,9 +244,24 @@ export default function PersonasPage() {
   const pageSize = 10;
 
   const load = () =>
-    api.listPersonas().then((d) => { setPersonas(d); setLoaded(true); }).catch(console.error);
+    api.listPersonas()
+      .then((d) => { setPersonas(d); setLoaded(true); })
+      .catch((e) => { console.error(e); setLoaded(true); });
   useEffect(() => { load(); }, []);
   useEffect(() => { setPage(1); }, [f]);
+
+  // Barra de progreso del popup: avanza mientras carga y se completa al llegar los datos.
+  useEffect(() => {
+    if (loaded) {
+      setProgress(100);
+      const t = setTimeout(() => setShowLoader(false), 500);
+      return () => clearTimeout(t);
+    }
+    const id = setInterval(() => {
+      setProgress((p) => (p < 92 ? p + Math.max(0.5, (92 - p) * 0.1) : p));
+    }, 180);
+    return () => clearInterval(id);
+  }, [loaded]);
 
   const onDelete = async (id: number) => {
     if (!confirm("¿Archivar esta persona? Sus respuestas previas se conservan.")) return;
@@ -324,17 +341,32 @@ export default function PersonasPage() {
 
   return (
     <div className="w80">
+      {showLoader && (
+        <div className="loading-overlay">
+          <div className="loading-pop">
+            <span className="loading-label blink-slow">Cargando población…</span>
+            <div className="loading-bar">
+              <div className="loading-bar-fill" style={{ width: `${progress}%` }} />
+            </div>
+            <span className="loading-pct">{Math.round(progress)}%</span>
+          </div>
+        </div>
+      )}
       <div className="toolbar">
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <h2 style={{ margin: 0, fontWeight: 400, fontSize: "2.6rem" }}>Población sintética</h2>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 14, flexWrap: "wrap" }}>
+            <h2 style={{ margin: 0, fontWeight: 400, fontSize: "2.6rem" }}>Población sintética</h2>
+            {loaded && (
+              <span className="muted" style={{ fontSize: "1rem", whiteSpace: "nowrap" }}>
+                {filtered.length} de {personas.length}
+              </span>
+            )}
+          </div>
           <p className="muted" style={{ margin: 0, maxWidth: 620, fontSize: "0.85rem" }}>
             Perfiles modelados para reflejar la distribución real de la población española
             adulta (mayor de 18 años) —edad, sexo, comunidad y estudios—. Estructura basada en INE 2024.
           </p>
         </div>
-        {loaded
-          ? <span className="muted">{filtered.length} de {personas.length}</span>
-          : <span className="muted blink">Cargando…</span>}
         <div style={{ flex: 1 }} />
         <button onClick={() => setGenOpen(true)}>Generar con IA</button>
         <button className="secondary" onClick={() => setEditing(emptyPersona())}>

@@ -142,6 +142,8 @@ function SurveyDetail({ id, onBack }: { id: number; onBack: () => void }) {
   const [results, setResults] = useState<SurveyResults | null>(null);
   const [saving, setSaving] = useState(false);
   const pollRef = useRef<number | null>(null);
+  const breakVarRef = useRef("");
+  useEffect(() => { breakVarRef.current = breakVar; }, [breakVar]);
 
   useEffect(() => {
     api.getSurvey(id).then((s) => {
@@ -195,9 +197,11 @@ function SurveyDetail({ id, onBack }: { id: number; onBack: () => void }) {
       pollRef.current = window.setInterval(async () => {
         const st = await api.surveyStatus(id);
         setEstado(st.estado); setProgress({ done: st.respondidas, total: ids.length });
+        // Refresco en vivo: actualiza gráficos a medida que entran respuestas.
+        if (st.respondidas > 0) loadResults(breakVarRef.current);
         if (st.estado !== "running" && pollRef.current) {
           window.clearInterval(pollRef.current); pollRef.current = null;
-          loadResults(breakVar);
+          loadResults(breakVarRef.current);
         }
       }, 2000);
     } catch (e) { alert("Error: " + (e as Error).message); setEstado("draft"); }

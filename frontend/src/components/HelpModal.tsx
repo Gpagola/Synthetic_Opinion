@@ -9,8 +9,8 @@ export default function HelpModal({ onClose }: { onClose: () => void }) {
 
         <p className="muted">
           <strong>Personæ</strong> es una herramienta de investigación con poblaciones sintéticas:
-          una biblioteca de personas modeladas según la realidad española (INE) y focus groups
-          conversacionales potenciados por IA.
+          una biblioteca de personas modeladas según la realidad española (INE), focus groups
+          conversacionales y encuestas cuantitativas, todo potenciado por IA.
         </p>
 
         <h3>Población sintética</h3>
@@ -48,6 +48,24 @@ export default function HelpModal({ onClose }: { onClose: () => void }) {
             volver a generarlo.</li>
         </ul>
 
+        <h3>Encuestas</h3>
+        <ul className="help-list">
+          <li><strong>Cuestionario.</strong> Añade preguntas y elige el tipo: opción única, opción
+            múltiple, Sí/No, escala 1–5, NPS 0–10 o <strong>pregunta abierta</strong> (texto libre).
+            En única/múltiple, escribe las opciones separadas por coma.</li>
+          <li><strong>Muestra.</strong> Elige el método: <em>Representativa</em> (cuotas edad×sexo según
+            INE), <em>Aleatoria simple</em> o <em>Segmento</em> (por filtros), e indica el tamaño (N).</li>
+          <li><strong>Modelo.</strong> Seleccionas el modelo de IA por encuesta (GPT-4o rápido o
+            GPT-5.5 con razonamiento). Cada persona responde el cuestionario en su personaje.</li>
+          <li><strong>Resultados en vivo.</strong> Las gráficas se actualizan a medida que entran las
+            respuestas: distribución y % por opción, media y NPS donde aplica, y verbatims (citas) en
+            las preguntas abiertas.</li>
+          <li><strong>Cruces.</strong> Selecciona una variable (género, edad, comunidad, ingresos,
+            educación) para ver la tabla cruzada por segmento.</li>
+          <li><strong>Exportar.</strong> Descarga todo a <strong>Excel</strong> (respuestas crudas +
+            tablas de resultados).</li>
+        </ul>
+
         <h3>Apariencia</h3>
         <ul className="help-list">
           <li><strong>Tema claro / oscuro.</strong> Botón con sol/luna arriba a la derecha; se recuerda
@@ -59,6 +77,8 @@ export default function HelpModal({ onClose }: { onClose: () => void }) {
           <li><strong>Focus group e informe:</strong> GPT-5.5 con razonamiento alto (respuestas más
             ricas; algo más lentas).</li>
           <li><strong>Creación de personas y recruiting:</strong> GPT-4o (rápido).</li>
+          <li><strong>Encuestas:</strong> modelo configurable por encuesta (GPT-4o por defecto;
+            GPT-5.5 con razonamiento si quieres respuestas más elaboradas).</li>
         </ul>
 
         <p className="muted" style={{ marginTop: "0.75rem" }}>

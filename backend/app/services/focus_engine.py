@@ -21,6 +21,7 @@ import random
 from sqlalchemy.orm import Session
 
 from app.config import settings
+from app.countries import country_name, cultural_context_block
 from app.database import SessionLocal
 from app.models import FocusGroup, Persona, Question, Response
 from app.services.llm import get_llm
@@ -65,11 +66,11 @@ RESPONDE SIN PREJUICIOS, SEGÚN TODO TU PERFIL:
 
 HABLA COMO HABLARÍA ALGUIEN CON TU PERFIL CONCRETO (registro/idiolecto propio):
 - Tu LÉXICO y tu forma de hablar están MARCADOS por tus características. Adáptalos de verdad:
-  · ORIGEN NACIONAL: si naciste fuera de España, usa los modismos y el acento escrito de tu país
-    (un colombiano, un argentino, un marroquí o un británico hablando español NO suenan igual ni
-    usan las mismas palabras que un español).
-  · ORIGEN REGIONAL: refleja el deje y las expresiones propias de tu comunidad (andaluz, catalán,
-    gallego, vasco, canario, madrileño…), sin exagerar hasta la caricatura.
+  · ORIGEN NACIONAL: si naciste fuera de {pais}, usa los modismos y el acento escrito de tu país
+    de origen (alguien de otro país, hablando español, NO suena igual ni usa las mismas palabras
+    que alguien de {pais}).
+  · ORIGEN REGIONAL: refleja el deje y las expresiones propias de tu región o zona dentro de
+    {pais}, sin exagerar hasta la caricatura.
   · NIVEL ECONÓMICO Y EDUCATIVO: tu registro (culto/llano), riqueza de vocabulario y formalidad
     dependen de tus estudios e ingresos. Alguien sin estudios o de clase baja NO habla como un
     directivo con posgrado; un joven no habla como un jubilado.
@@ -90,6 +91,8 @@ FORMA DE ESCRIBIR:
 - NO digas tu propio nombre en la respuesta: no firmes, no empieces con "Soy X…" ni te refieras
   a ti en tercera persona. El sistema ya muestra quién habla. Responde directamente, en primera
   persona, como en un chat.
+
+{contexto_pais}
 
 Tu perfil:
 {perfil}"""
@@ -203,6 +206,7 @@ def _build_user_prompt(
 def _answer(
     persona: Persona,
     idioma: str,
+    pais: str,
     tema: str,
     transcript: str,
     pregunta: str,
@@ -210,7 +214,11 @@ def _answer(
 ) -> str:
     llm = get_llm()
     system = _SYSTEM_TMPL.format(
-        nombre=persona.nombre, idioma=idioma, perfil=_persona_perfil(persona)
+        nombre=persona.nombre,
+        idioma=idioma,
+        pais=country_name(pais),
+        contexto_pais=cultural_context_block(pais),
+        perfil=_persona_perfil(persona),
     )
     user = _build_user_prompt(tema, transcript, pregunta, turno_previas, _estilo())
     # GPT-5.5 con razonamiento alto para respuestas más ricas y coherentes
@@ -283,7 +291,7 @@ def answer_question(focus_group_id: int, question_id: int) -> None:
             if focus_group_id in _CANCEL:
                 break  # el moderador ha interrumpido el turno
             texto = _answer(
-                persona, fg.idioma, fg.tema, transcript, question.texto, turno_previas
+                persona, fg.idioma, fg.pais, fg.tema, transcript, question.texto, turno_previas
             )
             resp = Response(
                 question_id=question.id,

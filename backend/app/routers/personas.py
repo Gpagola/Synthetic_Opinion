@@ -36,17 +36,9 @@ def list_personas(
         query = query.filter(Persona.activo.is_(True))
     if q:
         query = query.filter(Persona.nombre.like(f"%{q}%"))
-    personas = query.order_by(Persona.created_at.desc()).all()
     if pais:
-        personas = [
-            p
-            for p in personas
-            if pais in (
-                (p.sociodemografico or {}).get("pais_residencia"),
-                (p.sociodemografico or {}).get("pais_origen"),
-            )
-        ]
-    return personas
+        query = query.filter(Persona.pais == pais.upper())
+    return query.order_by(Persona.created_at.desc()).all()
 
 
 @router.post("", response_model=PersonaOut, status_code=201)
@@ -54,6 +46,7 @@ def create_persona(payload: PersonaCreate, db: Session = Depends(get_db)):
     persona = Persona(
         nombre=payload.nombre,
         idioma=payload.idioma,
+        pais=(payload.pais or "ES").upper(),
         origen=payload.origen,
         tags=payload.tags,
         sociodemografico=payload.sociodemografico.model_dump(),

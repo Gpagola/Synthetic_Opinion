@@ -1,4 +1,7 @@
+import { useCountry } from "../CountryContext";
+
 export default function ImportantModal({ onClose }: { onClose: () => void }) {
+  const { country } = useCountry();
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal important-modal" onClick={(e) => e.stopPropagation()}>
@@ -16,7 +19,7 @@ export default function ImportantModal({ onClose }: { onClose: () => void }) {
 
         <p>
           <strong>Personæ trabaja con poblaciones sintéticas generadas por inteligencia
-          artificial</strong>, modeladas según datos del INE. Los perfiles son <strong>ficticios</strong>
+          artificial</strong>, modeladas según datos demográficos oficiales ({country.fuenteDemografica}). Los perfiles son <strong>ficticios</strong>
           {" "}—no corresponden a personas reales ni contienen datos personales identificables— y sus
           respuestas en focus groups y encuestas son <strong>opiniones simuladas</strong>. Úsalo con
           criterio profesional, como insumo cualitativo y exploratorio.

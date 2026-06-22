@@ -15,6 +15,7 @@ class Persona(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     nombre: Mapped[str] = mapped_column(String(255), nullable=False)
     idioma: Mapped[str] = mapped_column(String(10), default="es", nullable=False)
+    pais: Mapped[str] = mapped_column(String(2), default="ES", nullable=False)  # ISO-2: ES | CL
     origen: Mapped[str] = mapped_column(String(20), default="ai", nullable=False)  # ai | manual
     activo: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 

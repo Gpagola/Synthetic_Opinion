@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import Markdown from "react-markdown";
 import { api, Candidate, FocusGroup, Persona, QuestionItem, Report } from "../api/client";
+import { useCountry } from "../CountryContext";
+import { getCountry } from "../countries";
 
 export default function FocusGroupsPage() {
   const [groups, setGroups] = useState<FocusGroup[]>([]);
@@ -41,13 +43,14 @@ export default function FocusGroupsPage() {
       <div className="card">
         <table>
           <thead>
-            <tr><th>Nombre</th><th>Tema</th><th>Idioma</th><th></th></tr>
+            <tr><th>Nombre</th><th>Tema</th><th>País</th><th>Idioma</th><th></th></tr>
           </thead>
           <tbody>
             {groups.map((g) => (
               <tr key={g.id}>
                 <td><strong>{g.nombre}</strong></td>
                 <td>{g.tema}</td>
+                <td>{getCountry(g.pais).nombre}</td>
                 <td>{g.idioma}</td>
                 <td style={{ whiteSpace: "nowrap", textAlign: "right" }}>
                   <button className="secondary" onClick={() => setSelectedId(g.id)}>Abrir chat</button>{" "}
@@ -56,7 +59,7 @@ export default function FocusGroupsPage() {
               </tr>
             ))}
             {groups.length === 0 && (
-              <tr><td colSpan={4} className="muted">No hay focus groups todavía.</td></tr>
+              <tr><td colSpan={5} className="muted">No hay focus groups todavía.</td></tr>
             )}
           </tbody>
         </table>
@@ -73,7 +76,8 @@ export default function FocusGroupsPage() {
 }
 
 function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (id: number) => void }) {
-  const [f, setF] = useState({ nombre: "", tema: "", descripcion: "", idioma: "es" });
+  const { pais, country } = useCountry();
+  const [f, setF] = useState({ nombre: "", tema: "", descripcion: "", idioma: "es", pais });
   const [saving, setSaving] = useState(false);
   const create = async () => {
     setSaving(true);
@@ -93,8 +97,15 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
           <input value={f.tema} onChange={(e) => setF({ ...f, tema: e.target.value })} /></div>
         <div><label>Descripción</label>
           <textarea rows={2} value={f.descripcion} onChange={(e) => setF({ ...f, descripcion: e.target.value })} /></div>
-        <div><label>Idioma</label>
-          <input value={f.idioma} onChange={(e) => setF({ ...f, idioma: e.target.value })} /></div>
+        <div className="row">
+          <div><label>Idioma</label>
+            <input value={f.idioma} onChange={(e) => setF({ ...f, idioma: e.target.value })} /></div>
+          <div><label>País (del escenario)</label>
+            <input value={country.nombre} disabled title="Se cambia con el selector de país de la barra superior" /></div>
+        </div>
+        <p className="muted" style={{ fontSize: "0.78rem" }}>
+          Solo podrás reclutar participantes de la población de {country.nombre}.
+        </p>
         <div className="flex-between" style={{ marginTop: "1rem" }}>
           <button className="secondary" onClick={onClose}>Cancelar</button>
           <button onClick={create} disabled={saving || !f.nombre}>Crear</button>
@@ -324,8 +335,9 @@ function FocusGroupDetail({ id, onBack }: { id: number; onBack: () => void }) {
       c.forEach((it) => it.responses.forEach((r) => { full[r.id] = wordsOf(r.texto).length; }));
       setRevealed(full);
       setErrorMsg(g.error_msg ?? null);
+      // Solo personas del país del focus group para el selector de miembros.
+      api.listPersonas(undefined, g.pais).then(setPersonas);
     })();
-    api.listPersonas().then(setPersonas);
     api.getReport(id).then(setReport).catch(() => setReport(null));
     return () => { if (pollRef.current) window.clearInterval(pollRef.current); };
   }, [id]);

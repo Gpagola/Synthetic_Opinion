@@ -6,7 +6,26 @@ import FocusGroupsPage from "./pages/FocusGroupsPage";
 import SurveysPage from "./pages/SurveysPage";
 import HelpModal from "./components/HelpModal";
 import ImportantModal from "./components/ImportantModal";
+import { CountryProvider, useCountry } from "./CountryContext";
+import { COUNTRY_LIST, CountryCode } from "./countries";
 import "./styles.css";
+
+function CountrySelect() {
+  const { pais, setPais } = useCountry();
+  return (
+    <select
+      className="country-select"
+      value={pais}
+      onChange={(e) => setPais(e.target.value as CountryCode)}
+      title="País del escenario (población, focus y encuestas)"
+      aria-label="País del escenario"
+    >
+      {COUNTRY_LIST.map((c) => (
+        <option key={c.codigo} value={c.codigo}>{c.nombre}</option>
+      ))}
+    </select>
+  );
+}
 
 function ThemeToggle() {
   const [theme, setTheme] = useState<string>(
@@ -92,6 +111,7 @@ function Layout() {
             </svg>
             Ayuda
           </button>
+          <CountrySelect />
           <ThemeToggle />
         </div>
       </header>
@@ -112,7 +132,9 @@ function Layout() {
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <BrowserRouter basename={import.meta.env.BASE_URL}>
-      <Layout />
+      <CountryProvider>
+        <Layout />
+      </CountryProvider>
     </BrowserRouter>
   </React.StrictMode>
 );

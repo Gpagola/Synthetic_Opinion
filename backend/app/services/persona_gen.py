@@ -6,6 +6,7 @@ usuario los revisa/edita antes de persistir).
 
 from __future__ import annotations
 
+from app.countries import country_name, cultural_context_block, get_country
 from app.schemas.persona import GenerateParams, PersonaBase
 from app.services.llm import get_llm
 
@@ -18,9 +19,10 @@ Respondes SIEMPRE en JSON válido."""
 
 
 def _build_prompt(params: GenerateParams) -> str:
+    pais_nombre = country_name(params.pais) if params.pais else None
     restricciones = []
-    if params.pais:
-        restricciones.append(f"País: {params.pais}")
+    if pais_nombre:
+        restricciones.append(f"País de residencia: {pais_nombre}")
     if params.region:
         restricciones.append(f"Región: {params.region}")
     if params.edad_min is not None or params.edad_max is not None:
@@ -34,12 +36,24 @@ def _build_prompt(params: GenerateParams) -> str:
 
     bloque_restr = "\n".join(f"- {r}" for r in restricciones) or "- Sin restricciones específicas"
 
+    bloque_pais = ""
+    if pais_nombre:
+        c = get_country(params.pais)
+        bloque_pais = (
+            f"\n{cultural_context_block(params.pais)}\n\n"
+            f"Haz que cada persona sea COHERENTE con la realidad de {pais_nombre}: nombres y "
+            f"apellidos típicos, ciudad/región concreta del país, ocupaciones, marcas y hábitos "
+            f"de consumo locales, e ingresos/precios en la moneda local. Los 'posicionamientos' "
+            f"deben tomar postura sobre los temas de debate del país ({c['temas_pais']}), con "
+            f"matices y sin consignas de partido.\n"
+        )
+
     return f"""Genera {params.cantidad} personas sintéticas distintas entre sí.
 Idioma de todos los textos: {params.idioma}.
 
 Restricciones:
 {bloque_restr}
-
+{bloque_pais}
 Devuelve un objeto JSON con esta forma EXACTA:
 {{
   "personas": [
@@ -82,8 +96,10 @@ def generate_personas(params: GenerateParams) -> list[PersonaBase]:
     data = llm.complete_json(_SYSTEM, _build_prompt(params))
     raw = data.get("personas", [])
     personas: list[PersonaBase] = []
+    pais_code = get_country(params.pais)["codigo"] if params.pais else "ES"
     for item in raw:
         item.setdefault("idioma", params.idioma)
+        item["pais"] = pais_code  # país del escenario seleccionado
         # Validación/normalización vía Pydantic; ignora campos sobrantes.
         personas.append(PersonaBase.model_validate(item))
     return personas

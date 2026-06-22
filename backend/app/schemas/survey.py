@@ -30,6 +30,7 @@ class SurveyCreate(BaseModel):
     tema: str = ""
     descripcion: str = ""
     idioma: str = "es"
+    pais: str = "ES"  # código ISO-2: ES | CL
 
 
 class SurveyListItem(BaseModel):
@@ -37,6 +38,7 @@ class SurveyListItem(BaseModel):
     nombre: str
     tema: str
     idioma: str
+    pais: str = "ES"
     estado: str
     created_at: datetime
 

@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api, Persona, QuestionIn, Survey, SurveyResults } from "../api/client";
+import { useCountry } from "../CountryContext";
+import { getCountry, Band } from "../countries";
 
 const Q_TYPES = [
   { v: "single", label: "Opción única" },
@@ -15,15 +17,9 @@ const NEEDS_OPTIONS = new Set(["single", "multiple"]);
 type EditQ = QuestionIn & { opcText?: string };
 const splitOpts = (s: string) => s.split(",").map((x) => x.trim()).filter(Boolean);
 
-// Pirámide INE adultos 18+: [banda, min, max, % adultos, % mujeres]
-const BANDS: [string, number, number, number, number][] = [
-  ["18-24", 18, 24, 0.08, 0.49], ["25-34", 25, 34, 0.14, 0.49], ["35-44", 35, 44, 0.18, 0.49],
-  ["45-54", 45, 54, 0.19, 0.50], ["55-64", 55, 64, 0.17, 0.51], ["65-74", 65, 74, 0.13, 0.53],
-  ["75-84", 75, 84, 0.08, 0.58], ["85+", 85, 200, 0.03, 0.67],
-];
 const BREAKS = [
   { v: "", label: "Sin cruce" }, { v: "genero", label: "Sexo" }, { v: "edad", label: "Edad" },
-  { v: "region", label: "Comunidad" }, { v: "ingresos", label: "Ingresos" }, { v: "educacion", label: "Educación" },
+  { v: "region", label: "Región" }, { v: "ingresos", label: "Ingresos" }, { v: "educacion", label: "Educación" },
 ];
 
 function normGen(g?: string | null): string {
@@ -36,20 +32,21 @@ function shuffle<T>(a: T[]): T[] {
   for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
   return a;
 }
-function bandOf(edad?: number | null): string | null {
+function bandOf(edad: number | null | undefined, bands: Band[]): string | null {
   if (edad == null) return null;
-  for (const [l, lo, hi] of BANDS) if (edad >= lo && edad <= hi) return l;
+  for (const [l, lo, hi] of bands) if (edad >= lo && edad <= hi) return l;
+  if (edad > bands[bands.length - 1][2]) return bands[bands.length - 1][0];
   return null;
 }
-function quotaSample(personas: Persona[], N: number): number[] {
+function quotaSample(personas: Persona[], N: number, bands: Band[]): number[] {
   const byCell: Record<string, Persona[]> = {};
   for (const p of personas) {
     const sd = p.sociodemografico ?? {};
-    const b = bandOf(sd.edad); const g = normGen(sd.genero);
+    const b = bandOf(sd.edad, bands); const g = normGen(sd.genero);
     if (b && (g === "Mujer" || g === "Hombre")) (byCell[`${b}|${g}`] ||= []).push(p);
   }
   const picked: number[] = []; const used = new Set<number>();
-  for (const [band, , , share, fem] of BANDS) {
+  for (const [band, , , share, fem] of bands) {
     for (const [g, prop] of [["Mujer", fem], ["Hombre", 1 - fem]] as [string, number][]) {
       const pool = shuffle([...(byCell[`${band}|${g}`] ?? [])]);
       for (const p of pool.slice(0, Math.round(N * share * prop))) { picked.push(p.id); used.add(p.id); }
@@ -84,12 +81,13 @@ export default function SurveysPage() {
       </p>
       <div className="card table-card">
         <table>
-          <thead><tr><th>Nombre</th><th>Tema</th><th>Estado</th><th></th></tr></thead>
+          <thead><tr><th>Nombre</th><th>Tema</th><th>País</th><th>Estado</th><th></th></tr></thead>
           <tbody>
             {surveys.map((s) => (
               <tr key={s.id}>
                 <td><strong>{s.nombre}</strong></td>
                 <td>{s.tema}</td>
+                <td>{getCountry(s.pais).nombre}</td>
                 <td>{s.estado}</td>
                 <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                   <button className="secondary" onClick={() => setSelectedId(s.id)}>Abrir</button>{" "}
@@ -101,7 +99,7 @@ export default function SurveysPage() {
                 </td>
               </tr>
             ))}
-            {surveys.length === 0 && <tr><td colSpan={4} className="muted">Aún no hay encuestas.</td></tr>}
+            {surveys.length === 0 && <tr><td colSpan={5} className="muted">Aún no hay encuestas.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -112,13 +110,16 @@ export default function SurveysPage() {
 }
 
 function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (id: number) => void }) {
-  const [f, setF] = useState({ nombre: "", tema: "", idioma: "es" });
+  const { pais, country } = useCountry();
+  const [f, setF] = useState({ nombre: "", tema: "", idioma: "es", pais });
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <h2>Nueva encuesta</h2>
         <div><label>Nombre</label><input value={f.nombre} onChange={(e) => setF({ ...f, nombre: e.target.value })} /></div>
         <div><label>Tema</label><input value={f.tema} onChange={(e) => setF({ ...f, tema: e.target.value })} /></div>
+        <div><label>País (del escenario)</label>
+          <input value={country.nombre} disabled title="Se cambia con el selector de país de la barra superior" /></div>
         <div className="flex-between" style={{ marginTop: "1rem" }}>
           <button className="secondary" onClick={onClose}>Cancelar</button>
           <button disabled={!f.nombre} onClick={async () => onCreated((await api.createSurvey(f)).id)}>Crear</button>
@@ -150,9 +151,10 @@ function SurveyDetail({ id, onBack }: { id: number; onBack: () => void }) {
       setSurvey(s); setEstado(s.estado);
       setQuestions(s.questions.map((q) => ({ texto: q.texto, tipo: q.tipo, opciones: q.opciones, obligatoria: q.obligatoria, opcText: q.opciones.join(", ") })));
       setModelo(s.modelo || "gpt-4o");
+      // Solo personas del país de la encuesta (la muestra se toma de ahí).
+      api.listPersonas(undefined, s.pais).then(setPersonas);
       if (s.estado === "completed") loadResults("");
     });
-    api.listPersonas().then(setPersonas);
     return () => { if (pollRef.current) window.clearInterval(pollRef.current); };
   }, [id]);
 
@@ -164,8 +166,9 @@ function SurveyDetail({ id, onBack }: { id: number; onBack: () => void }) {
     if (seg.edadMax && (sd.edad == null || sd.edad > +seg.edadMax)) return false;
     return true;
   });
+  const country = getCountry(survey?.pais);
   const sampleIds = (): number[] => {
-    if (method === "representativa") return quotaSample(personas, N);
+    if (method === "representativa") return quotaSample(personas, N, country.pyramidBands);
     const pool = method === "segmento" ? eligible : personas;
     return shuffle([...pool]).slice(0, N).map((p) => p.id);
   };
@@ -258,14 +261,14 @@ function SurveyDetail({ id, onBack }: { id: number; onBack: () => void }) {
             <h3>Muestra</h3>
             <div><label>Método</label>
               <select value={method} onChange={(e) => setMethod(e.target.value as any)}>
-                <option value="representativa">Representativa (cuotas edad×sexo, INE)</option>
+                <option value="representativa">Representativa (cuotas edad×sexo, {country.fuenteDemografica})</option>
                 <option value="aleatoria">Aleatoria simple</option>
                 <option value="segmento">Segmento (filtros)</option>
               </select>
             </div>
             {method === "segmento" && (
               <div className="row" style={{ marginTop: 6 }}>
-                <div><label>Comunidad</label>
+                <div><label>Región</label>
                   <select value={seg.region} onChange={(e) => setSeg({ ...seg, region: e.target.value })}>
                     <option value="">Todas</option>
                     {regions.sort().map((r) => <option key={r} value={r}>{r}</option>)}

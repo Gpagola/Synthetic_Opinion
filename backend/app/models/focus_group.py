@@ -23,6 +23,7 @@ class FocusGroup(Base):
     descripcion: Mapped[str] = mapped_column(Text, default="")
     tema: Mapped[str] = mapped_column(String(500), default="")
     idioma: Mapped[str] = mapped_column(String(10), default="es", nullable=False)
+    pais: Mapped[str] = mapped_column(String(2), default="ES", nullable=False)  # ISO-2: ES | CL
     estado: Mapped[str] = mapped_column(String(20), default="draft", nullable=False)
     # draft | running | completed | error
     error_msg: Mapped[str | None] = mapped_column(Text, nullable=True)

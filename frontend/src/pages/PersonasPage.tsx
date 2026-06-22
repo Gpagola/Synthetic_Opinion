@@ -1,10 +1,14 @@
 import { useEffect, useState } from "react";
 import { api, Persona, PersonaBase, GenerateParams } from "../api/client";
 import SpainChoropleth from "../components/SpainChoropleth";
+import ChileChoropleth from "../components/ChileChoropleth";
+import { useCountry } from "../CountryContext";
+import { getCountry } from "../countries";
 
-const emptyPersona = (): PersonaBase => ({
+const emptyPersona = (pais = "ES"): PersonaBase => ({
   nombre: "",
   idioma: "es",
+  pais,
   tags: [],
   sociodemografico: {},
   consumidor: { categorias_interes: [], marcas: [], canales: [] },
@@ -231,15 +235,16 @@ const EMPTY_FILTERS = {
   region: "", provincia: "", genero: "", ingresos: "", educacion: "",
 };
 
-// Caché a nivel de módulo: persiste la población cargada entre navegaciones
-// (la página se desmonta al cambiar de pestaña, pero esto sobrevive).
-let personasCache: Persona[] | null = null;
+// Caché a nivel de módulo, por país: persiste la población cargada entre
+// navegaciones (la página se desmonta al cambiar de pestaña, pero esto sobrevive).
+const personasCache: Record<string, Persona[]> = {};
 
 export default function PersonasPage() {
-  const [personas, setPersonas] = useState<Persona[]>(personasCache ?? []);
-  const [loaded, setLoaded] = useState(personasCache !== null);
-  const [progress, setProgress] = useState(personasCache !== null ? 100 : 6);
-  const [showLoader, setShowLoader] = useState(personasCache === null);
+  const { pais, country } = useCountry();
+  const [personas, setPersonas] = useState<Persona[]>(personasCache[pais] ?? []);
+  const [loaded, setLoaded] = useState(personasCache[pais] !== undefined);
+  const [progress, setProgress] = useState(personasCache[pais] !== undefined ? 100 : 6);
+  const [showLoader, setShowLoader] = useState(personasCache[pais] === undefined);
   const [editing, setEditing] = useState<(PersonaBase & { id?: number }) | null>(null);
   const [genOpen, setGenOpen] = useState(false);
   const [f, setF] = useState({ ...EMPTY_FILTERS });
@@ -248,11 +253,18 @@ export default function PersonasPage() {
   const pageSize = 10;
 
   const load = () =>
-    api.listPersonas()
-      .then((d) => { personasCache = d; setPersonas(d); setLoaded(true); })
+    api.listPersonas(undefined, pais)
+      .then((d) => { personasCache[pais] = d; setPersonas(d); setLoaded(true); })
       .catch((e) => { console.error(e); setLoaded(true); });
-  // Solo carga si no hay caché previa; al volver de otra pestaña reutiliza lo cargado.
-  useEffect(() => { if (personasCache === null) load(); }, []);
+  // Al montar y al CAMBIAR DE PAÍS: usa la caché del país o recarga.
+  useEffect(() => {
+    setF({ ...EMPTY_FILTERS });  // los filtros (región, etc.) son específicos de país
+    if (personasCache[pais] !== undefined) {
+      setPersonas(personasCache[pais]); setLoaded(true); setShowLoader(false); setProgress(100);
+    } else {
+      setPersonas([]); setLoaded(false); setShowLoader(true); setProgress(6); load();
+    }
+  }, [pais]);
   useEffect(() => { setPage(1); }, [f]);
 
   // Barra de progreso del popup: avanza mientras carga y se completa al llegar los datos.
@@ -326,7 +338,8 @@ export default function PersonasPage() {
       if (cp.length >= 2) { const code = cp.slice(0, 2); prov[code] = (prov[code] || 0) + 1; }
       const b = bandOf(sd.edad);
       if (b && (g === "Mujer" || g === "Hombre")) {
-        const foreign = !!sd.pais_origen && sd.pais_origen.trim().toLowerCase() !== "españa";
+        const foreign = !!sd.pais_origen
+          && sd.pais_origen.trim().toLowerCase() !== country.nombre.toLowerCase();
         pyr[idx[b]][`${g}_${foreign ? "ext" : "es"}` as "Mujer_es" | "Mujer_ext" | "Hombre_es" | "Hombre_ext"]++;
       }
       const i = normIngreso(sd.ingresos);
@@ -368,13 +381,13 @@ export default function PersonasPage() {
             )}
           </div>
           <p className="muted" style={{ margin: 0, maxWidth: 620, fontSize: "0.85rem" }}>
-            Perfiles modelados para reflejar la distribución real de la población española
-            adulta (mayor de 18 años) —edad, sexo, comunidad y estudios—. Estructura basada en INE 2024.
+            Perfiles modelados para reflejar la distribución real de la población {country.gentilicio}
+            {" "}adulta (mayor de 18 años) —edad, sexo, región y estudios—. Estructura basada en {country.fuenteDemografica}.
           </p>
         </div>
         <div style={{ flex: 1 }} />
         <button onClick={() => setGenOpen(true)}>Generar con IA</button>
-        <button className="secondary" onClick={() => setEditing(emptyPersona())}>
+        <button className="secondary" onClick={() => setEditing(emptyPersona(pais))}>
           + Nueva manual
         </button>
       </div>
@@ -428,16 +441,25 @@ export default function PersonasPage() {
         </div>
         <div className="stats-center">
           <div className="card"><h3>Distribución territorial</h3>
-            <SpainChoropleth
-              byRegion={stats.byRegion}
-              byProvince={stats.byProvince}
-              selectedRegion={f.region}
-              selectedProvince={f.provincia}
-              onSelect={(kind, key) =>
-                setF((prev) => kind === "prov"
-                  ? { ...prev, provincia: prev.provincia === key ? "" : key, region: "" }
-                  : { ...prev, region: prev.region === key ? "" : key, provincia: "" })}
-            />
+            {country.mapa === "cl-choropleth" ? (
+              <ChileChoropleth
+                byRegion={stats.byRegion}
+                selectedRegion={f.region}
+                onSelect={(key) =>
+                  setF((prev) => ({ ...prev, region: prev.region === key ? "" : key, provincia: "" }))}
+              />
+            ) : (
+              <SpainChoropleth
+                byRegion={stats.byRegion}
+                byProvince={stats.byProvince}
+                selectedRegion={f.region}
+                selectedProvince={f.provincia}
+                onSelect={(kind, key) =>
+                  setF((prev) => kind === "prov"
+                    ? { ...prev, provincia: prev.provincia === key ? "" : key, region: "" }
+                    : { ...prev, region: prev.region === key ? "" : key, provincia: "" })}
+              />
+            )}
           </div>
         </div>
         <div className="stats-side">
@@ -648,7 +670,8 @@ function PersonaEditor({
 // ---------- Modal de generación con IA ----------
 
 function GenerateModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
-  const [params, setParams] = useState<GenerateParams>({ cantidad: 3, idioma: "es" });
+  const { pais, country } = useCountry();
+  const [params, setParams] = useState<GenerateParams>({ cantidad: 3, idioma: "es", pais });
   const [loading, setLoading] = useState(false);
   const [drafts, setDrafts] = useState<PersonaBase[] | null>(null);
   const [savingIdx, setSavingIdx] = useState<number | null>(null);
@@ -695,8 +718,13 @@ function GenerateModal({ onClose, onSaved }: { onClose: () => void; onSaved: () 
               onChange={(e) => setParams({ ...params, cantidad: +e.target.value })} /></div>
           <div><label>Idioma</label>
             <input value={params.idioma} onChange={(e) => setParams({ ...params, idioma: e.target.value })} /></div>
-          <div><label>País</label>
-            <input value={params.pais ?? ""} onChange={(e) => setParams({ ...params, pais: e.target.value })} /></div>
+          <div><label>País (del escenario)</label>
+            <input value={country.nombre} disabled title="Se cambia con el selector de país de la barra superior" /></div>
+          <div><label>Región (opcional)</label>
+            <select value={params.region ?? ""} onChange={(e) => setParams({ ...params, region: e.target.value || undefined })}>
+              <option value="">Cualquiera</option>
+              {country.regiones.map((r) => <option key={r} value={r}>{r}</option>)}
+            </select></div>
         </div>
         <div className="row">
           <div><label>Edad mín.</label>

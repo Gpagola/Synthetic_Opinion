@@ -258,6 +258,16 @@ a { color: inherit; }
 }
 .help-btn:hover { background: var(--panel-2); color: var(--text); opacity: 1; }
 
+.country-select {
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  border-radius: var(--radius);
+  height: 34px; padding: 0 0.6rem; margin-left: 0.85rem;
+  font-size: 0.8rem; flex: 0 0 auto; cursor: pointer;
+}
+.country-select:hover { background: var(--panel-2); }
+
 /* Botón de aviso IMPORTANTE — acento rojo para destacar */
 .important-btn {
   display: inline-flex; align-items: center; gap: 0.4rem;

@@ -16,6 +16,7 @@ from types import SimpleNamespace
 from openpyxl import Workbook
 from sqlalchemy.orm import Session
 
+from app.countries import cultural_context_block
 from app.database import SessionLocal
 from app.models import Persona, Survey, SurveyResponse
 from app.services.llm import get_llm
@@ -138,6 +139,7 @@ def answer_survey(survey_id: int, persona_ids: list[int], modelo: str,
         }
         ordered = [personas[i] for i in persona_ids if i in personas]
         idioma = survey.idioma
+        contexto_pais = cultural_context_block(survey.pais)
         prompt = _build_prompt(survey)
         # Specs de preguntas como objetos planos para validar sin tocar la sesión.
         questions = [SimpleNamespace(id=q.id, tipo=q.tipo, opciones=list(q.opciones))
@@ -153,7 +155,8 @@ def answer_survey(survey_id: int, persona_ids: list[int], modelo: str,
             pid, nombre, perfil, _snap = item
             system = (
                 f"Eres {nombre}, una persona real que participa en una encuesta. Respondes en tu "
-                f"personaje, en {idioma}. Responde SIEMPRE en JSON válido.\n\nTu perfil:\n{perfil}"
+                f"personaje, en {idioma}. Responde SIEMPRE en JSON válido.\n\n"
+                f"{contexto_pais}\n\nTu perfil:\n{perfil}"
             )
             try:
                 data = llm.complete_json(system, prompt, model=modelo, reasoning_effort=reasoning_effort)

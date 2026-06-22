@@ -8,6 +8,7 @@ class FocusGroupBase(BaseModel):
     descripcion: str = ""
     tema: str = ""
     idioma: str = "es"
+    pais: str = "ES"  # código ISO-2: ES | CL
 
 
 class FocusGroupCreate(FocusGroupBase):
@@ -19,6 +20,7 @@ class FocusGroupUpdate(BaseModel):
     descripcion: str | None = None
     tema: str | None = None
     idioma: str | None = None
+    pais: str | None = None
 
 
 class MembersUpdate(BaseModel):

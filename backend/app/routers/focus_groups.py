@@ -35,6 +35,7 @@ def _to_out(fg: FocusGroup, db: Session) -> FocusGroupOut:
         descripcion=fg.descripcion,
         tema=fg.tema,
         idioma=fg.idioma,
+        pais=fg.pais,
         estado=fg.estado,
         error_msg=fg.error_msg,
         created_at=fg.created_at,
@@ -103,8 +104,12 @@ def set_members(fg_id: int, payload: MembersUpdate, db: Session = Depends(get_db
     return _to_out(fg, db)
 
 
-def _active_personas(db: Session) -> dict[int, Persona]:
-    return {p.id: p for p in db.query(Persona).filter(Persona.activo.is_(True)).all()}
+def _active_personas(db: Session, pais: str | None = None) -> dict[int, Persona]:
+    """Personas activas, opcionalmente acotadas al país del focus group."""
+    query = db.query(Persona).filter(Persona.activo.is_(True))
+    if pais:
+        query = query.filter(Persona.pais == pais)
+    return {p.id: p for p in query.all()}
 
 
 def _candidate(p: Persona, motivo: str) -> CandidateOut:
@@ -125,13 +130,16 @@ def _candidate(p: Persona, motivo: str) -> CandidateOut:
 def recruit_candidates(fg_id: int, payload: RecruitRequest, db: Session = Depends(get_db)):
     """Propone candidatos de la biblioteca de Personas que encajan con el perfil
     descrito. No fija miembros: es una propuesta editable."""
-    if db.get(FocusGroup, fg_id) is None:
+    fg = db.get(FocusGroup, fg_id)
+    if fg is None:
         raise HTTPException(status_code=404, detail="Focus group no encontrado")
-    personas = _active_personas(db)
+    personas = _active_personas(db, fg.pais)
     if not personas:
         raise HTTPException(status_code=400, detail="No hay personas en la biblioteca")
     try:
-        seleccion = recruiting.recruit(payload.perfil, payload.cantidad, list(personas.values()))
+        seleccion = recruiting.recruit(
+            payload.perfil, payload.cantidad, list(personas.values()), fg.pais
+        )
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=502, detail=f"Error en el recruiting: {exc}")
 
@@ -148,11 +156,14 @@ def recruit_candidates(fg_id: int, payload: RecruitRequest, db: Session = Depend
 @router.post("/{fg_id}/recruit/replace", response_model=CandidateOut)
 def recruit_replace(fg_id: int, payload: ReplaceRequest, db: Session = Depends(get_db)):
     """Sugiere una persona alternativa que encaje, distinta de exclude_ids."""
-    if db.get(FocusGroup, fg_id) is None:
+    fg = db.get(FocusGroup, fg_id)
+    if fg is None:
         raise HTTPException(status_code=404, detail="Focus group no encontrado")
-    personas = _active_personas(db)
+    personas = _active_personas(db, fg.pais)
     try:
-        alt = recruiting.find_replacement(payload.perfil, list(personas.values()), payload.exclude_ids)
+        alt = recruiting.find_replacement(
+            payload.perfil, list(personas.values()), payload.exclude_ids, fg.pais
+        )
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=502, detail=f"Error en el recruiting: {exc}")
     pid = alt.get("persona_id") if alt else None

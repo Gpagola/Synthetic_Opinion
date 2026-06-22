@@ -33,6 +33,7 @@ export interface Opinion {
 export interface PersonaBase {
   nombre: string;
   idioma: string;
+  pais: string; // código ISO-2: ES | CL
   tags: string[];
   sociodemografico: Sociodemografico;
   consumidor: Consumidor;
@@ -90,6 +91,7 @@ export interface FocusGroup {
   descripcion: string;
   tema: string;
   idioma: string;
+  pais: string;
   estado: string;
   error_msg?: string | null;
   created_at: string;
@@ -131,6 +133,7 @@ export interface Survey {
   tema: string;
   descripcion: string;
   idioma: string;
+  pais: string;
   estado: string;
   modelo: string;
   reasoning_effort?: string | null;
@@ -186,8 +189,13 @@ export const api = {
   // Personas
   generatePersonas: (p: GenerateParams) =>
     req<PersonaBase[]>("/personas/generate", { method: "POST", body: JSON.stringify(p) }),
-  listPersonas: (q?: string) =>
-    req<Persona[]>(`/personas${q ? `?q=${encodeURIComponent(q)}` : ""}`),
+  listPersonas: (q?: string, pais?: string) => {
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (pais) params.set("pais", pais);
+    const qs = params.toString();
+    return req<Persona[]>(`/personas${qs ? `?${qs}` : ""}`);
+  },
   createPersona: (p: PersonaBase & { origen?: string }) =>
     req<Persona>("/personas", { method: "POST", body: JSON.stringify(p) }),
   updatePersona: (id: number, p: Partial<PersonaBase>) =>

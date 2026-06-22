@@ -35,6 +35,7 @@ class Opinion(BaseModel):
 class PersonaBase(BaseModel):
     nombre: str
     idioma: str = "es"
+    pais: str = "ES"  # código ISO-2: ES | CL
     tags: list[str] = Field(default_factory=list)
     sociodemografico: Sociodemografico = Field(default_factory=Sociodemografico)
     consumidor: Consumidor = Field(default_factory=Consumidor)
@@ -49,6 +50,7 @@ class PersonaCreate(PersonaBase):
 class PersonaUpdate(BaseModel):
     nombre: str | None = None
     idioma: str | None = None
+    pais: str | None = None
     tags: list[str] | None = None
     sociodemografico: Sociodemografico | None = None
     consumidor: Consumidor | None = None

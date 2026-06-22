@@ -14,6 +14,7 @@ import json
 import random
 import re
 
+from app.countries import country_name, region_names
 from app.models import Persona
 from app.services.llm import get_llm
 
@@ -57,16 +58,17 @@ def _norm_gen(g: str | None) -> str:
     return "Otro"
 
 
-def extract_criteria(perfil: str) -> dict:
+def extract_criteria(perfil: str, pais: str = "ES") -> dict:
     """El LLM traduce el perfil libre a filtros estructurados (solo usa el texto)."""
     llm = get_llm()
+    regiones_pais = ", ".join(region_names(pais))
     user = f"""Perfil de público objetivo: "{perfil}"
 
 Extrae filtros de búsqueda. Devuelve JSON con esta forma (usa null o [] si no se especifica):
 {{
   "edad_min": <int o null>, "edad_max": <int o null>,
   "genero": "Mujer" | "Hombre" | null,
-  "regiones": [<comunidades autónomas de España mencionadas>],
+  "regiones": [<regiones de {country_name(pais)} mencionadas; opciones válidas: {regiones_pais}>],
   "pais_origen": <país o null; "extranjero" si pide nacidos fuera>,
   "ingresos": [<de: Bajo, Medio-bajo, Medio, Medio-alto, Alto>],
   "educacion": [<de: Sin estudios, Primaria, Secundaria, Bachillerato, Formación Profesional, Universitario, Postgrado>],
@@ -78,7 +80,7 @@ Extrae filtros de búsqueda. Devuelve JSON con esta forma (usa null o [] si no s
         return {}
 
 
-def _match_hard(p: Persona, crit: dict) -> bool:
+def _match_hard(p: Persona, crit: dict, pais: str = "ES") -> bool:
     sd = p.sociodemografico or {}
     edad = sd.get("edad")
     if crit.get("edad_min") and (edad is None or edad < crit["edad_min"]):
@@ -95,8 +97,9 @@ def _match_hard(p: Persona, crit: dict) -> bool:
     po = crit.get("pais_origen")
     if po:
         origen = (sd.get("pais_origen") or "").strip().lower()
+        local = country_name(pais).strip().lower()
         if po.lower() == "extranjero":
-            if not origen or origen == "españa":
+            if not origen or origen == local:
                 return False
         elif po.lower() not in origen and origen not in po.lower():
             return False
@@ -118,9 +121,9 @@ def _kw_match(p: Persona, kws: list[str]) -> bool:
     return any(k.lower() in hay for k in kws)
 
 
-def _select_pool(personas: list[Persona], crit: dict, cap: int) -> list[Persona]:
+def _select_pool(personas: list[Persona], crit: dict, cap: int, pais: str = "ES") -> list[Persona]:
     """Prefiltra (hard) + prioriza keywords + acota a `cap` con muestreo aleatorio."""
-    hard = [p for p in personas if _match_hard(p, crit)]
+    hard = [p for p in personas if _match_hard(p, crit, pais)]
     if not hard:
         hard = list(personas)  # si nada encaja, no dejamos el recruiting vacío
     kws = crit.get("keywords") or []
@@ -147,12 +150,12 @@ def _brief(p: Persona) -> dict:
     }
 
 
-def recruit(perfil: str, cantidad: int, personas: list[Persona]) -> list[dict]:
+def recruit(perfil: str, cantidad: int, personas: list[Persona], pais: str = "ES") -> list[dict]:
     """Devuelve [{persona_id, motivo}] con la selección propuesta."""
     if not personas:
         return []
-    crit = extract_criteria(perfil)
-    pool = _select_pool(personas, crit, MAX_POOL)
+    crit = extract_criteria(perfil, pais)
+    pool = _select_pool(personas, crit, MAX_POOL, pais)
     llm = get_llm()
     user = f"""Perfil de público objetivo buscado:
 "{perfil}"
@@ -169,14 +172,15 @@ Devuelve JSON: {{"candidatos": [{{"persona_id": <id>, "motivo": "por qué encaja
     return data.get("candidatos", [])
 
 
-def find_replacement(perfil: str, personas: list[Persona], exclude_ids: list[int]) -> dict | None:
+def find_replacement(perfil: str, personas: list[Persona], exclude_ids: list[int],
+                     pais: str = "ES") -> dict | None:
     """Sugiere UNA persona alternativa que encaje, distinta de las excluidas."""
     excl = set(exclude_ids)
     disponibles = [p for p in personas if p.id not in excl]
     if not disponibles:
         return None
-    crit = extract_criteria(perfil)
-    pool = _select_pool(disponibles, crit, MAX_POOL)
+    crit = extract_criteria(perfil, pais)
+    pool = _select_pool(disponibles, crit, MAX_POOL, pais)
     llm = get_llm()
     user = f"""Perfil de público objetivo buscado:
 "{perfil}"

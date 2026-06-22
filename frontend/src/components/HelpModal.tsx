@@ -1,4 +1,7 @@
+import { useCountry } from "../CountryContext";
+
 export default function HelpModal({ onClose }: { onClose: () => void }) {
+  const { country } = useCountry();
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal help-modal" onClick={(e) => e.stopPropagation()}>
@@ -9,8 +12,10 @@ export default function HelpModal({ onClose }: { onClose: () => void }) {
 
         <p className="muted">
           <strong>Personæ</strong> es una herramienta de investigación con poblaciones sintéticas:
-          una biblioteca de personas modeladas según la realidad española (INE), focus groups
-          conversacionales y encuestas cuantitativas, todo potenciado por IA.
+          una biblioteca de personas modeladas según la realidad {country.gentilicio} ({country.fuenteDemografica}),
+          focus groups conversacionales y encuestas cuantitativas, todo potenciado por IA. Cambia el
+          país del escenario con el selector de la barra superior (España / Chile): población, focus
+          y encuestas se adaptan al país, incluidos modismos, marcas y referencias locales.
         </p>
 
         <h3>Población sintética</h3>
@@ -27,8 +32,8 @@ export default function HelpModal({ onClose }: { onClose: () => void }) {
           <li><strong>Son interactivas.</strong> Haz <em>clic</em> en cualquier barra, sector del
             donut, franja de la pirámide o zona del mapa para <strong>autofiltrar</strong> toda la
             población por ese criterio (se combinan entre sí; vuelve a clicar para quitarlo).</li>
-          <li><strong>Mapa.</strong> Selector <em>Comunidades / Provincias</em>, mapa de calor por nº
-            de personas; pasa el ratón para ver el detalle y clic para filtrar.</li>
+          <li><strong>Mapa.</strong> Mapa de calor por nº de personas y región (en España, además,
+            por provincias); pasa el ratón para ver el detalle y clic para filtrar.</li>
           <li><strong>Educación.</strong> Pasa el ratón por cada nivel para ver qué comprende.</li>
         </ul>
 
@@ -54,13 +59,13 @@ export default function HelpModal({ onClose }: { onClose: () => void }) {
             múltiple, Sí/No, escala 1–5, NPS 0–10 o <strong>pregunta abierta</strong> (texto libre).
             En única/múltiple, escribe las opciones separadas por coma.</li>
           <li><strong>Muestra.</strong> Elige el método: <em>Representativa</em> (cuotas edad×sexo según
-            INE), <em>Aleatoria simple</em> o <em>Segmento</em> (por filtros), e indica el tamaño (N).</li>
+            {country.fuenteDemografica}), <em>Aleatoria simple</em> o <em>Segmento</em> (por filtros), e indica el tamaño (N).</li>
           <li><strong>Modelo.</strong> Seleccionas el modelo de IA por encuesta (GPT-4o rápido o
             GPT-5.5 con razonamiento). Cada persona responde el cuestionario en su personaje.</li>
           <li><strong>Resultados en vivo.</strong> Las gráficas se actualizan a medida que entran las
             respuestas: distribución y % por opción, media y NPS donde aplica, y verbatims (citas) en
             las preguntas abiertas.</li>
-          <li><strong>Cruces.</strong> Selecciona una variable (género, edad, comunidad, ingresos,
+          <li><strong>Cruces.</strong> Selecciona una variable (género, edad, región, ingresos,
             educación) para ver la tabla cruzada por segmento.</li>
           <li><strong>Exportar.</strong> Descarga todo a <strong>Excel</strong> (respuestas crudas +
             tablas de resultados).</li>
@@ -82,8 +87,8 @@ export default function HelpModal({ onClose }: { onClose: () => void }) {
         </ul>
 
         <p className="muted" style={{ marginTop: "0.75rem" }}>
-          Los datos buscan reflejar la población española adulta (18+) según el INE 2024:
-          pirámide edad×sexo, distribución por comunidad, nivel de estudios (CINE) y de renta (deciles),
+          Los datos buscan reflejar la población {country.gentilicio} adulta (18+) según {country.fuenteDemografica}:
+          pirámide edad×sexo, distribución por región, nivel de estudios y de renta,
           con coherencia entre variables.
         </p>
       </div>

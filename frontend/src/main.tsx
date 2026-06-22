@@ -91,6 +91,7 @@ function Layout() {
             <NavLink to="/surveys">Encuestas</NavLink>
           </nav>
           <div style={{ flex: 1 }} />
+          <div className="topbar-actions">
           <span className="credit">
             Desarrollado por Braintrust CS firma miembro de Andersen Consulting
           </span>
@@ -113,6 +114,7 @@ function Layout() {
           </button>
           <CountrySelect />
           <ThemeToggle />
+          </div>
         </div>
       </header>
       {help && <HelpModal onClose={() => setHelp(false)} />}

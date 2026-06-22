@@ -24,13 +24,13 @@ const CODE2REGION: Record<number, string> = {
 };
 
 // Chile continental es largo y estrecho. Lo mostramos APAISADO (de lado a
-// lado): rotamos la proyección 90° (norte a la izquierda) y lo ajustamos a un
-// lienzo horizontal a todo el ancho.
+// lado): rotamos la proyección 90° de modo que el norte (Arica) quede a la
+// izquierda y la Patagonia (sur) a la derecha, ajustado a todo el ancho.
 const W = 960;
 const H = 210;
 
 const fc: any = clGeo as any;
-const proj = geoMercator().angle(-90).fitSize([W, H], fc);
+const proj = geoMercator().angle(90).fitSize([W, H], fc);
 const path = geoPath(proj as any);
 
 const RAMP: Record<string, { min: number[]; max: number[] }> = {

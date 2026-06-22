@@ -270,6 +270,11 @@ a { color: inherit; }
 }
 .country-select:hover { background: var(--panel-2); }
 
+/* Agrupa los controles de la derecha (crédito, Importante, Ayuda, país, tema)
+   con espaciado compacto, para que NO les afecte el gap grande del topbar y el
+   toggle de tema no se quede suelto/fuera. */
+.topbar-actions { display: flex; align-items: center; flex: 0 0 auto; }
+
 /* Botón de aviso IMPORTANTE — acento rojo para destacar */
 .important-btn {
   display: inline-flex; align-items: center; gap: 0.4rem;

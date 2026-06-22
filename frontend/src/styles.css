@@ -158,6 +158,7 @@ a { color: inherit; }
 }
 .topbar h1 { font-size: 1.05rem; margin: 0; }
 .brand { display: flex; align-items: center; gap: 0.6rem; }
+.brand-text { display: flex; flex-direction: column; line-height: 1.15; }
 .logo-mark { display: block; overflow: visible; color: var(--text); }
 .logo-mark circle {
   transform-box: fill-box;

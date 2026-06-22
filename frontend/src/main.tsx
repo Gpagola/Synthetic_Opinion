@@ -83,7 +83,12 @@ function Layout() {
         <div className="topbar-inner">
           <div className="brand">
             <Logo />
-            <span className="brand-name">Personæ</span>
+            <div className="brand-text">
+              <span className="brand-name">Personæ</span>
+              <span className="credit">
+                Desarrollado por Braintrust CS firma miembro de Andersen Consulting
+              </span>
+            </div>
           </div>
           <nav>
             <NavLink to="/personas">Población</NavLink>
@@ -92,9 +97,6 @@ function Layout() {
           </nav>
           <div style={{ flex: 1 }} />
           <div className="topbar-actions">
-          <span className="credit">
-            Desarrollado por Braintrust CS firma miembro de Andersen Consulting
-          </span>
           <button className="important-btn" onClick={() => setImportant(true)} title="Aviso importante">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
               strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">

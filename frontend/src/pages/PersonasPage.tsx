@@ -419,58 +419,55 @@ export default function PersonasPage() {
         </div>
       </div>
 
-      <div className="stats-layout">
-        <div className="stats-side">
-          <div className="card"><h3>Pirámide demográfica</h3>
-            <Pyramid
-              data={stats.pyr}
-              selected={AGE_BANDS.find(([, lo, hi]) => String(lo) === f.edadMin && String(hi) === f.edadMax)?.[0] ?? ""}
-              onSelect={(band) => {
-                const b = AGE_BANDS.find((x) => x[0] === band);
-                if (!b) return;
-                setF((p) => (String(b[1]) === p.edadMin && String(b[2]) === p.edadMax)
-                  ? { ...p, edadMin: "", edadMax: "" }
-                  : { ...p, edadMin: String(b[1]), edadMax: String(b[2]) });
-              }}
-            />
-          </div>
-          <div className="card"><h3>Nivel de ingresos</h3>
-            <StatBars items={stats.incItems} selected={f.ingresos}
-              onSelect={(l) => setF((p) => ({ ...p, ingresos: p.ingresos === l ? "" : l }))} />
-          </div>
+      {/* Mapa territorial: full width, debajo de los filtros */}
+      <div className="card stats-map"><h3>Distribución territorial</h3>
+        {country.mapa === "cl-choropleth" ? (
+          <ChileChoropleth
+            byRegion={stats.byRegion}
+            selectedRegion={f.region}
+            onSelect={(key) =>
+              setF((prev) => ({ ...prev, region: prev.region === key ? "" : key, provincia: "" }))}
+          />
+        ) : (
+          <SpainChoropleth
+            byRegion={stats.byRegion}
+            byProvince={stats.byProvince}
+            selectedRegion={f.region}
+            selectedProvince={f.provincia}
+            onSelect={(kind, key) =>
+              setF((prev) => kind === "prov"
+                ? { ...prev, provincia: prev.provincia === key ? "" : key, region: "" }
+                : { ...prev, region: prev.region === key ? "" : key, provincia: "" })}
+          />
+        )}
+      </div>
+
+      {/* Las cuatro fichas restantes, en fila, debajo del mapa */}
+      <div className="stats-grid4">
+        <div className="card"><h3>Pirámide demográfica</h3>
+          <Pyramid
+            data={stats.pyr}
+            selected={AGE_BANDS.find(([, lo, hi]) => String(lo) === f.edadMin && String(hi) === f.edadMax)?.[0] ?? ""}
+            onSelect={(band) => {
+              const b = AGE_BANDS.find((x) => x[0] === band);
+              if (!b) return;
+              setF((p) => (String(b[1]) === p.edadMin && String(b[2]) === p.edadMax)
+                ? { ...p, edadMin: "", edadMax: "" }
+                : { ...p, edadMin: String(b[1]), edadMax: String(b[2]) });
+            }}
+          />
         </div>
-        <div className="stats-center">
-          <div className="card"><h3>Distribución territorial</h3>
-            {country.mapa === "cl-choropleth" ? (
-              <ChileChoropleth
-                byRegion={stats.byRegion}
-                selectedRegion={f.region}
-                onSelect={(key) =>
-                  setF((prev) => ({ ...prev, region: prev.region === key ? "" : key, provincia: "" }))}
-              />
-            ) : (
-              <SpainChoropleth
-                byRegion={stats.byRegion}
-                byProvince={stats.byProvince}
-                selectedRegion={f.region}
-                selectedProvince={f.provincia}
-                onSelect={(kind, key) =>
-                  setF((prev) => kind === "prov"
-                    ? { ...prev, provincia: prev.provincia === key ? "" : key, region: "" }
-                    : { ...prev, region: prev.region === key ? "" : key, provincia: "" })}
-              />
-            )}
-          </div>
+        <div className="card"><h3>Nivel de ingresos</h3>
+          <StatBars items={stats.incItems} selected={f.ingresos}
+            onSelect={(l) => setF((p) => ({ ...p, ingresos: p.ingresos === l ? "" : l }))} />
         </div>
-        <div className="stats-side">
-          <div className="card"><h3>Género</h3>
-            <Donut items={stats.genItems} selected={f.genero}
-              onSelect={(l) => setF((p) => ({ ...p, genero: p.genero === l ? "" : l }))} />
-          </div>
-          <div className="card"><h3>Nivel de educación</h3>
-            <StatBars items={stats.eduItems} detail={EDU_DESC} selected={f.educacion}
-              onSelect={(l) => setF((p) => ({ ...p, educacion: p.educacion === l ? "" : l }))} />
-          </div>
+        <div className="card"><h3>Género</h3>
+          <Donut items={stats.genItems} selected={f.genero}
+            onSelect={(l) => setF((p) => ({ ...p, genero: p.genero === l ? "" : l }))} />
+        </div>
+        <div className="card"><h3>Nivel de educación</h3>
+          <StatBars items={stats.eduItems} detail={EDU_DESC} selected={f.educacion}
+            onSelect={(l) => setF((p) => ({ ...p, educacion: p.educacion === l ? "" : l }))} />
         </div>
       </div>
 

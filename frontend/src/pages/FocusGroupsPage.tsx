@@ -5,12 +5,16 @@ import { useCountry } from "../CountryContext";
 import { getCountry } from "../countries";
 
 export default function FocusGroupsPage() {
+  const { pais, country } = useCountry();
   const [groups, setGroups] = useState<FocusGroup[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [creating, setCreating] = useState(false);
 
   const load = () => api.listFocusGroups().then(setGroups).catch(console.error);
   useEffect(() => { load(); }, []);
+
+  // Solo los focus groups del país seleccionado en la barra superior.
+  const visibles = groups.filter((g) => (g.pais || "ES") === pais);
 
   const borrar = async (g: FocusGroup) => {
     if (!confirm(`¿Borrar el focus group "${g.nombre}"? Se eliminará su chat e informes. Las personas no se borran.`)) return;
@@ -46,7 +50,7 @@ export default function FocusGroupsPage() {
             <tr><th>Nombre</th><th>Tema</th><th>País</th><th>Idioma</th><th></th></tr>
           </thead>
           <tbody>
-            {groups.map((g) => (
+            {visibles.map((g) => (
               <tr key={g.id}>
                 <td><strong>{g.nombre}</strong></td>
                 <td>{g.tema}</td>
@@ -58,8 +62,8 @@ export default function FocusGroupsPage() {
                 </td>
               </tr>
             ))}
-            {groups.length === 0 && (
-              <tr><td colSpan={5} className="muted">No hay focus groups todavía.</td></tr>
+            {visibles.length === 0 && (
+              <tr><td colSpan={5} className="muted">No hay focus groups en {country.nombre} todavía.</td></tr>
             )}
           </tbody>
         </table>

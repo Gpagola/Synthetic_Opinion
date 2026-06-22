@@ -23,12 +23,14 @@ const CODE2REGION: Record<number, string> = {
   12: "Región de Magallanes y de la Antártica Chilena",
 };
 
-// Chile continental es largo y estrecho -> lienzo vertical.
-const W = 150;
-const H = 440;
+// Chile continental es largo y estrecho. Lo mostramos APAISADO (de lado a
+// lado): rotamos la proyección 90° (norte a la izquierda) y lo ajustamos a un
+// lienzo horizontal a todo el ancho.
+const W = 960;
+const H = 210;
 
 const fc: any = clGeo as any;
-const proj = geoMercator().fitSize([W, H], fc);
+const proj = geoMercator().angle(-90).fitSize([W, H], fc);
 const path = geoPath(proj as any);
 
 const RAMP: Record<string, { min: number[]; max: number[] }> = {
@@ -73,7 +75,7 @@ export default function ChileChoropleth({
       <div className="dest-chips" style={{ marginBottom: 8 }}>
         <button type="button" className="chip active">Regiones</button>
       </div>
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: "block", maxHeight: 440 }}>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: "block" }}>
         {fc.features.map((f: any, i: number) => {
           const key = keyOf(f);
           const n = byRegion[key] ?? 0;

@@ -59,11 +59,15 @@ function quotaSample(personas: Persona[], N: number, bands: Band[]): number[] {
 }
 
 export default function SurveysPage() {
+  const { pais, country } = useCountry();
   const [surveys, setSurveys] = useState<Survey[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [creating, setCreating] = useState(false);
   const load = () => api.listSurveys().then(setSurveys).catch(console.error);
   useEffect(() => { load(); }, []);
+
+  // Solo las encuestas del país seleccionado en la barra superior.
+  const visibles = surveys.filter((s) => (s.pais || "ES") === pais);
 
   if (selectedId !== null) {
     return <SurveyDetail id={selectedId} onBack={() => { setSelectedId(null); load(); }} />;
@@ -83,7 +87,7 @@ export default function SurveysPage() {
         <table>
           <thead><tr><th>Nombre</th><th>Tema</th><th>País</th><th>Estado</th><th></th></tr></thead>
           <tbody>
-            {surveys.map((s) => (
+            {visibles.map((s) => (
               <tr key={s.id}>
                 <td><strong>{s.nombre}</strong></td>
                 <td>{s.tema}</td>
@@ -99,7 +103,7 @@ export default function SurveysPage() {
                 </td>
               </tr>
             ))}
-            {surveys.length === 0 && <tr><td colSpan={5} className="muted">Aún no hay encuestas.</td></tr>}
+            {visibles.length === 0 && <tr><td colSpan={5} className="muted">Aún no hay encuestas en {country.nombre}.</td></tr>}
           </tbody>
         </table>
       </div>

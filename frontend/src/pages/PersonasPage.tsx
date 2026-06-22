@@ -419,57 +419,83 @@ export default function PersonasPage() {
         </div>
       </div>
 
-      {/* Mapa territorial: full width, debajo de los filtros */}
-      <div className="card stats-map"><h3>Distribución territorial</h3>
-        {country.mapa === "cl-choropleth" ? (
-          <ChileChoropleth
-            byRegion={stats.byRegion}
-            selectedRegion={f.region}
-            onSelect={(key) =>
-              setF((prev) => ({ ...prev, region: prev.region === key ? "" : key, provincia: "" }))}
-          />
-        ) : (
-          <SpainChoropleth
-            byRegion={stats.byRegion}
-            byProvince={stats.byProvince}
-            selectedRegion={f.region}
-            selectedProvince={f.provincia}
-            onSelect={(kind, key) =>
-              setF((prev) => kind === "prov"
-                ? { ...prev, provincia: prev.provincia === key ? "" : key, region: "" }
-                : { ...prev, region: prev.region === key ? "" : key, provincia: "" })}
-          />
-        )}
-      </div>
+      {(() => {
+        // Fichas reutilizadas en ambos layouts
+        const cardPiramide = (
+          <div className="card"><h3>Pirámide demográfica</h3>
+            <Pyramid
+              data={stats.pyr}
+              selected={AGE_BANDS.find(([, lo, hi]) => String(lo) === f.edadMin && String(hi) === f.edadMax)?.[0] ?? ""}
+              onSelect={(band) => {
+                const b = AGE_BANDS.find((x) => x[0] === band);
+                if (!b) return;
+                setF((p) => (String(b[1]) === p.edadMin && String(b[2]) === p.edadMax)
+                  ? { ...p, edadMin: "", edadMax: "" }
+                  : { ...p, edadMin: String(b[1]), edadMax: String(b[2]) });
+              }}
+            />
+          </div>
+        );
+        const cardIngresos = (
+          <div className="card"><h3>Nivel de ingresos</h3>
+            <StatBars items={stats.incItems} selected={f.ingresos}
+              onSelect={(l) => setF((p) => ({ ...p, ingresos: p.ingresos === l ? "" : l }))} />
+          </div>
+        );
+        const cardGenero = (
+          <div className="card"><h3>Género</h3>
+            <Donut items={stats.genItems} selected={f.genero}
+              onSelect={(l) => setF((p) => ({ ...p, genero: p.genero === l ? "" : l }))} />
+          </div>
+        );
+        const cardEducacion = (
+          <div className="card"><h3>Nivel de educación</h3>
+            <StatBars items={stats.eduItems} detail={EDU_DESC} selected={f.educacion}
+              onSelect={(l) => setF((p) => ({ ...p, educacion: p.educacion === l ? "" : l }))} />
+          </div>
+        );
 
-      {/* Las cuatro fichas restantes, en fila, debajo del mapa */}
-      <div className="stats-grid4">
-        <div className="card"><h3>Pirámide demográfica</h3>
-          <Pyramid
-            data={stats.pyr}
-            selected={AGE_BANDS.find(([, lo, hi]) => String(lo) === f.edadMin && String(hi) === f.edadMax)?.[0] ?? ""}
-            onSelect={(band) => {
-              const b = AGE_BANDS.find((x) => x[0] === band);
-              if (!b) return;
-              setF((p) => (String(b[1]) === p.edadMin && String(b[2]) === p.edadMax)
-                ? { ...p, edadMin: "", edadMax: "" }
-                : { ...p, edadMin: String(b[1]), edadMax: String(b[2]) });
-            }}
-          />
-        </div>
-        <div className="card"><h3>Nivel de ingresos</h3>
-          <StatBars items={stats.incItems} selected={f.ingresos}
-            onSelect={(l) => setF((p) => ({ ...p, ingresos: p.ingresos === l ? "" : l }))} />
-        </div>
-        <div className="card"><h3>Género</h3>
-          <Donut items={stats.genItems} selected={f.genero}
-            onSelect={(l) => setF((p) => ({ ...p, genero: p.genero === l ? "" : l }))} />
-        </div>
-        <div className="card"><h3>Nivel de educación</h3>
-          <StatBars items={stats.eduItems} detail={EDU_DESC} selected={f.educacion}
-            onSelect={(l) => setF((p) => ({ ...p, educacion: p.educacion === l ? "" : l }))} />
-        </div>
-      </div>
+        // CHILE: mapa apaisado a todo el ancho arriba + las 4 fichas debajo.
+        if (country.mapa === "cl-choropleth") {
+          return (
+            <>
+              <div className="card stats-map"><h3>Distribución territorial</h3>
+                <ChileChoropleth
+                  byRegion={stats.byRegion}
+                  selectedRegion={f.region}
+                  onSelect={(key) =>
+                    setF((prev) => ({ ...prev, region: prev.region === key ? "" : key, provincia: "" }))}
+                />
+              </div>
+              <div className="stats-grid4">
+                {cardPiramide}{cardIngresos}{cardGenero}{cardEducacion}
+              </div>
+            </>
+          );
+        }
+
+        // ESPAÑA (y por defecto): layout original de 3 columnas, mapa en el centro.
+        return (
+          <div className="stats-layout">
+            <div className="stats-side">{cardPiramide}{cardIngresos}</div>
+            <div className="stats-center">
+              <div className="card"><h3>Distribución territorial</h3>
+                <SpainChoropleth
+                  byRegion={stats.byRegion}
+                  byProvince={stats.byProvince}
+                  selectedRegion={f.region}
+                  selectedProvince={f.provincia}
+                  onSelect={(kind, key) =>
+                    setF((prev) => kind === "prov"
+                      ? { ...prev, provincia: prev.provincia === key ? "" : key, region: "" }
+                      : { ...prev, region: prev.region === key ? "" : key, provincia: "" })}
+                />
+              </div>
+            </div>
+            <div className="stats-side">{cardGenero}{cardEducacion}</div>
+          </div>
+        );
+      })()}
 
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "1rem", marginTop: "1rem" }}>
         <button className="secondary" onClick={() => setListCollapsed((v) => !v)}>

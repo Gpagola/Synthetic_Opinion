@@ -60,14 +60,14 @@ const EDU_ORDER = [
 const EDU_SHORT: Record<string, string> = {
   "Postgrado (máster/doctorado)": "Postgrado",
   "Universitario (grado/diplomatura/FP superior)": "Universitario",
-  "Formación Profesional (grado medio)": "Formación Profesional",
+  "Formación Profesional (grado medio)": "FP",
   "Secundaria (1ª etapa / ESO)": "Secundaria",
 };
 // Qué comprende cada nivel (tooltip al pasar el ratón)
 const EDU_DESC: Record<string, string> = {
   "Postgrado": "Máster y doctorado",
   "Universitario": "Grado, diplomatura, licenciatura y FP de grado superior",
-  "Formación Profesional": "FP de grado medio (ciclo formativo)",
+  "FP": "FP de grado medio (ciclo formativo)",
   "Bachillerato": "Bachillerato (2ª etapa de secundaria)",
   "Secundaria": "Primera etapa de secundaria / ESO",
   "Primaria": "Educación primaria",

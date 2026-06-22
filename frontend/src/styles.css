@@ -426,12 +426,11 @@ tbody tr:hover { background: var(--bg-2); }
 .bars { display: flex; flex-direction: column; gap: 6px; }
 .bar-row { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; }
 .bar-label {
-  flex: 0 0 165px; color: var(--text-dim);
+  flex: 0 0 105px; color: var(--text-dim);
   line-height: 1.2;
   overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 .bar-track {
   flex: 1; height: 14px; background: var(--bg-2);

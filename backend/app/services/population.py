@@ -137,19 +137,29 @@ def build_slots(country_code: str, nuevas: int) -> list[dict]:
         for c in sorted(cells, key=lambda c: target[c], reverse=True)[:abs(diff)]:
             alloc[c] += 1 if diff > 0 else -1
 
+    edu_cfg = country.get("educacion")
     slots = []
     for (bi, g), n in alloc.items():
         _, lo, hi, _, _ = bands[bi]
         for _ in range(n):
             edad = random.randint(lo, hi)
             region = weighted(country["regiones"])
-            slots.append({
+            slot = {
                 "edad": edad,
                 "genero": g,
                 "region": region,
                 "pais_origen": _origin(country, region, edad),
                 "orientacion_politica": weighted(country["politica"]),
-            })
+            }
+            # Educación e ingresos calibrados (solo países que lo definen, p.ej.
+            # Chile). El ingreso se condiciona a la educación para mantener
+            # coherencia. España no define `educacion` -> slot sin estas claves.
+            if edu_cfg:
+                nat, cat = weighted([((n_, c_), w_) for (n_, c_, w_) in edu_cfg])
+                slot["nivel_educativo"] = nat          # etiqueta natural (display + LLM)
+                slot["nivel_educativo_cat"] = cat      # categoría canónica (stats)
+                slot["nivel_ingresos"] = weighted(country["ingresos_por_educacion"][cat])
+            slots.append(slot)
     random.shuffle(slots)
     print(f"[{country['nombre']}] activas actuales: {actuales} · objetivo total: "
           f"{total} · nuevas a crear: {len(slots)}")
@@ -170,16 +180,31 @@ def _system_prompt(country_code: str) -> str:
 
 def _batch_prompt(country_code: str, slots_batch: list[dict]) -> str:
     c = get_country(country_code)
+    calibra = bool(c.get("educacion"))
+    # Vista de slots para el prompt: ocultamos `nivel_educativo_cat` (uso interno
+    # para las estadísticas) y mostramos solo lo que el LLM debe respetar.
+    slots_view = [{k: v for k, v in s.items() if k != "nivel_educativo_cat"} for s in slots_batch]
+    extra = ""
+    if calibra:
+        anclas = "; ".join(f"{k}: {v}" for k, v in c["ingresos_anclas"].items())
+        extra = (
+            f"\n- ADEMÁS, respeta EXACTAMENTE `nivel_educativo` (nivel de estudios) y "
+            f"`nivel_ingresos` (clase socioeconómica) de cada slot. La ocupación, la bio y el "
+            f"estilo de vida deben ser coherentes con ese nivel educativo y esa clase.\n"
+            f"- El campo `ingresos` que devuelvas debe ser un IMPORTE realista en pesos chilenos "
+            f"coherente con la clase `nivel_ingresos` del slot, según estas anclas mensuales "
+            f"líquidas: {anclas}. Copia `nivel_educativo` y `nivel_ingresos` tal cual en la salida."
+        )
     return f"""Genera una persona por cada SLOT asignado. Respeta EXACTAMENTE la edad, género,
 región, país de origen y orientación política de cada slot (todos residen en {c['nombre']}).
 
 Slots (en este orden):
-{json.dumps(slots_batch, ensure_ascii=False, indent=1)}
+{json.dumps(slots_view, ensure_ascii=False, indent=1)}
 
 Para cada persona:
 - Coherencia con el slot y con la realidad de {c['nombre']} (nombres y apellidos típicos, ciudad
   concreta dentro de su región, ocupación, estudios e ingresos plausibles para su edad y zona,
-  marcas y hábitos de consumo locales, moneda local).
+  marcas y hábitos de consumo locales, moneda local).{extra}
 - "bio": un perfil CLARO en 3-5 frases que explique quién es, su contexto vital y su carácter.
 - "opinion.posicionamientos": una POSTURA TOMADA y concreta sobre los principales temas de la
   sociedad actual de {c['nombre']}: {c['temas_pais']}. Coherente con su orientación política
@@ -219,6 +244,13 @@ def _merge(country_code: str, slot: dict, data: dict) -> Persona:
     sd["region"] = slot["region"]
     sd["pais_origen"] = slot["pais_origen"]
     sd["pais_residencia"] = c["nombre"]
+    # Educación e ingresos calibrados: se fuerzan desde el slot (la categoría
+    # canónica alimenta las estadísticas; el importe `ingresos` del LLM se
+    # conserva para el detalle). España no trae estas claves -> sin cambios.
+    if "nivel_educativo" in slot:
+        sd["nivel_educativo"] = slot["nivel_educativo"]
+        sd["nivel_educativo_cat"] = slot["nivel_educativo_cat"]
+        sd["nivel_ingresos"] = slot["nivel_ingresos"]
     tags = list(data.get("tags", []))
     tags.append(slot["orientacion_politica"])
     return Persona(

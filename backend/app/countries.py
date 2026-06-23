@@ -173,6 +173,40 @@ _CL = {
         ("izquierda", 16), ("centro-izquierda", 20), ("centro", 18),
         ("centro-derecha", 20), ("derecha", 16), ("apolítico/abstencionista", 10),
     ],
+    # Educación: (etiqueta_natural_para_el_LLM, categoría_canónica, peso).
+    # Calibrado a la estructura educativa adulta de Chile (CASEN / OECD EAG:
+    # educación terciaria ~30%). Las categorías canónicas coinciden con las
+    # que el frontend usa para agrupar (EDU_ORDER). Bachillerato no aplica a
+    # Chile (la enseñanza media va a "Secundaria").
+    "educacion": [
+        ("Postgrado (magíster o doctorado)",   "Postgrado (máster/doctorado)",                  3),
+        ("Universitario (título profesional)", "Universitario (grado/diplomatura/FP superior)", 15),
+        ("Técnico de nivel superior",          "Formación Profesional (grado medio)",           12),
+        ("Enseñanza media completa",           "Secundaria (1ª etapa / ESO)",                   45),
+        ("Enseñanza básica",                   "Primaria",                                      20),
+        ("Sin estudios formales",              "Sin estudios",                                   5),
+    ],
+    # Clase de ingreso CONDICIONADA al nivel educativo (coherencia interna):
+    # categoría canónica de educación -> [(clase_ingreso, peso)]. Las clases
+    # coinciden con INC_ORDER del frontend (sin "Otros"). La marginal resultante
+    # (≈ educación × condicional) reparte una desigualdad plausible para Chile.
+    "ingresos_por_educacion": {
+        "Postgrado (máster/doctorado)":                  [("Alto", 35), ("Medio-alto", 35), ("Medio", 25), ("Medio-bajo", 5), ("Bajo", 0)],
+        "Universitario (grado/diplomatura/FP superior)": [("Alto", 15), ("Medio-alto", 30), ("Medio", 35), ("Medio-bajo", 15), ("Bajo", 5)],
+        "Formación Profesional (grado medio)":           [("Alto", 3), ("Medio-alto", 12), ("Medio", 40), ("Medio-bajo", 30), ("Bajo", 15)],
+        "Secundaria (1ª etapa / ESO)":                   [("Alto", 1), ("Medio-alto", 5), ("Medio", 30), ("Medio-bajo", 34), ("Bajo", 30)],
+        "Primaria":                                      [("Alto", 0), ("Medio-alto", 2), ("Medio", 15), ("Medio-bajo", 33), ("Bajo", 50)],
+        "Sin estudios":                                  [("Alto", 0), ("Medio-alto", 0), ("Medio", 8), ("Medio-bajo", 22), ("Bajo", 70)],
+    },
+    # Anclas de ingreso mensual líquido (CLP) por clase, para que el LLM genere
+    # importes realistas coherentes con la clase social asignada al slot.
+    "ingresos_anclas": {
+        "Bajo":       "menos de $500.000 CLP al mes",
+        "Medio-bajo": "entre $500.000 y $900.000 CLP al mes",
+        "Medio":      "entre $900.000 y $1.800.000 CLP al mes",
+        "Medio-alto": "entre $1.800.000 y $3.500.000 CLP al mes",
+        "Alto":       "más de $3.500.000 CLP al mes",
+    },
     "temas_pais": (
         "pensiones (AFP) y reforma previsional, delincuencia y seguridad ciudadana, "
         "inmigración, vivienda y arriendo, salud (Fonasa/Isapres y listas de espera), "

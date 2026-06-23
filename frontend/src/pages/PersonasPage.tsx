@@ -87,6 +87,17 @@ function normEdu(s?: string | null): string {
   if (/sin estudios|ninguno|analfabet|sin formaci/.test(t)) return "Sin estudios";
   return "Otros";
 }
+// Clasificación de una persona en ingresos/educación. Prefiere los campos
+// canónicos del seed calibrado (`nivel_ingresos`, `nivel_educativo_cat`) y, si no
+// existen (p.ej. personas de España), cae al normalizador por texto libre.
+function incOf(sd: any): string {
+  const c = sd?.nivel_ingresos;
+  return INC_ORDER.includes(c) ? c : normIngreso(sd?.ingresos);
+}
+function eduOf(sd: any): string {
+  const c = sd?.nivel_educativo_cat;
+  return EDU_ORDER.includes(c) ? c : normEdu(sd?.nivel_educativo);
+}
 function topEntries(obj: Record<string, number>, n = 7): [string, number][] {
   const arr = Object.entries(obj).sort((a, b) => b[1] - a[1]);
   if (arr.length <= n) return arr;
@@ -303,9 +314,9 @@ export default function PersonasPage() {
     if (f.region && sd.region !== f.region) return false;
     if (f.provincia && (sd.codigo_postal ?? "").slice(0, 2) !== f.provincia) return false;
     if (f.genero && normGenero(sd.genero) !== f.genero) return false;
-    if (f.ingresos && normIngreso(sd.ingresos) !== f.ingresos) return false;
+    if (f.ingresos && incOf(sd) !== f.ingresos) return false;
     if (f.educacion) {
-      const full = normEdu(sd.nivel_educativo);
+      const full = eduOf(sd);
       if ((EDU_SHORT[full] ?? full) !== f.educacion) return false;
     }
     return true;
@@ -342,9 +353,9 @@ export default function PersonasPage() {
           && sd.pais_origen.trim().toLowerCase() !== country.nombre.toLowerCase();
         pyr[idx[b]][`${g}_${foreign ? "ext" : "es"}` as "Mujer_es" | "Mujer_ext" | "Hombre_es" | "Hombre_ext"]++;
       }
-      const i = normIngreso(sd.ingresos);
+      const i = incOf(sd);
       inc[i] = (inc[i] || 0) + 1;
-      const e = normEdu(sd.nivel_educativo);
+      const e = eduOf(sd);
       edu[e] = (edu[e] || 0) + 1;
     }
     const genItems = (["Mujer", "Hombre", "Otro"] as const)

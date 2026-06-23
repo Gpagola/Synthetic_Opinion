@@ -12,6 +12,11 @@ on:
         description: "Número de personas chilenas a generar"
         required: true
         default: "600"
+      wipe:
+        description: "Borrar TODAS las personas de Chile antes de generar (re-seed limpio)"
+        type: boolean
+        required: false
+        default: false
 
 concurrency:
   group: seed-chile
@@ -23,6 +28,16 @@ jobs:
     steps:
       - name: Install ssh tools
         run: sudo apt-get update && sudo apt-get install -y sshpass
+
+      - name: Wipe Chile population (optional, synchronous)
+        if: ${{ github.event.inputs.wipe == 'true' }}
+        env:
+          SSHPASS: ${{ secrets.SERVER_PASSWORD }}
+        # Borrado SÍNCRONO (rápido) antes de sembrar, para un re-seed limpio.
+        run: |
+          sshpass -e ssh -o StrictHostKeyChecking=no \
+            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
+            "docker exec personae-backend python wipe_country.py CL"
 
       - name: Launch Chile seed (detached) inside backend container
         env:

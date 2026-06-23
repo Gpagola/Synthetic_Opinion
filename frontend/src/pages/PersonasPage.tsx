@@ -261,7 +261,7 @@ export default function PersonasPage() {
   const [f, setF] = useState({ ...EMPTY_FILTERS });
   const [listCollapsed, setListCollapsed] = useState(false);
   const [page, setPage] = useState(1);
-  const pageSize = 10;
+  const pageSize = 40;
 
   const load = () =>
     api.listPersonas(undefined, pais)
@@ -516,6 +516,13 @@ export default function PersonasPage() {
 
       {!listCollapsed && (
       <div className="card table-card">
+        {totalPages > 1 && (
+          <div className="pagination pagination-top">
+            <button className="secondary" disabled={current <= 1} onClick={() => setPage(current - 1)}>← Anterior</button>
+            <span className="muted">Página {current} de {totalPages}</span>
+            <button className="secondary" disabled={current >= totalPages} onClick={() => setPage(current + 1)}>Siguiente →</button>
+          </div>
+        )}
         <table>
           <thead>
             <tr>
@@ -550,14 +557,6 @@ export default function PersonasPage() {
             )}
           </tbody>
         </table>
-
-        {totalPages > 1 && (
-          <div className="pagination">
-            <button className="secondary" disabled={current <= 1} onClick={() => setPage(current - 1)}>← Anterior</button>
-            <span className="muted">Página {current} de {totalPages}</span>
-            <button className="secondary" disabled={current >= totalPages} onClick={() => setPage(current + 1)}>Siguiente →</button>
-          </div>
-        )}
       </div>
       )}
 

@@ -27,7 +27,7 @@ const CODE2REGION: Record<number, string> = {
 // lado): rotamos la proyección 90° de modo que el norte (Arica) quede a la
 // izquierda y la Patagonia (sur) a la derecha, ajustado a todo el ancho.
 const W = 960;
-const H = 150;
+const H = 210;
 
 const fc: any = clGeo as any;
 const proj = geoMercator().angle(90).fitSize([W, H], fc);

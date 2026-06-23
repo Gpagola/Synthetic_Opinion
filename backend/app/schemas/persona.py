@@ -11,6 +11,11 @@ class Sociodemografico(BaseModel):
     region: str | None = None
     codigo_postal: str | None = None
     nivel_educativo: str | None = None
+    # Categoría canónica de educación y clase de ingreso (seed calibrado, p.ej.
+    # Chile). Alimentan las estadísticas del frontend; el resto de países las
+    # dejan a None y el front cae a la normalización por texto libre.
+    nivel_educativo_cat: str | None = None
+    nivel_ingresos: str | None = None
     ingresos: str | None = None
     ocupacion: str | None = None
     estado_civil: str | None = None

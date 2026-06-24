@@ -91,6 +91,19 @@ export default function HelpModal({ onClose }: { onClose: () => void }) {
           pirámide edad×sexo, distribución por región, nivel de estudios y de renta,
           con coherencia entre variables.
         </p>
+
+        <h3>Conclusión</h3>
+        <p className="muted">
+          La utilidad de Personæ no es acertar el número real, es barrer terreno barato y rápido
+          antes de gastar en campo: descartar ideas malas, generar hipótesis, pre-testear un
+          cuestionario, ensayar un focus. Es un instrumento de <strong>exploración</strong>, no de
+          validación. No debemos comparar esta solución con la encuesta real. El trabajo es decidir
+          qué llevar a la encuesta real.
+        </p>
+        <p className="muted">
+          <strong>En una frase:</strong> no reemplaza a tu cliente, te ayuda a no malgastar plata
+          averiguando qué preguntarle.
+        </p>
       </div>
     </div>
   );

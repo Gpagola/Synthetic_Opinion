@@ -70,20 +70,16 @@ class OpenAIProvider:
 
 
 def _extract_json(text: str) -> dict:
-    """Parsea el JSON de una respuesta de Claude de forma robusta: quita vallas
-    de código markdown y recorta del primer `{` al último `}` antes de json.loads."""
+    """Parsea el JSON de una respuesta de Claude de forma robusta: localiza el
+    primer `{` y usa `raw_decode`, que lee SOLO el primer objeto JSON balanceado
+    e ignora cualquier prefijo (vallas ```json) o cola (texto extra tras el `}`,
+    vallas de cierre). Evita el error 'Extra data' aunque el modelo añada texto."""
     t = (text or "").strip()
-    if t.startswith("```"):
-        # ```json ... ```  ó  ``` ... ```
-        t = t.split("```", 2)[1] if t.count("```") >= 2 else t.strip("`")
-        if t.lstrip().lower().startswith("json"):
-            t = t.lstrip()[4:]
-    t = t.strip()
-    if not t.startswith("{"):
-        ini, fin = t.find("{"), t.rfind("}")
-        if ini != -1 and fin != -1 and fin > ini:
-            t = t[ini:fin + 1]
-    return json.loads(t)
+    ini = t.find("{")
+    if ini == -1:
+        raise json.JSONDecodeError("No se encontró objeto JSON", t or "", 0)
+    obj, _ = json.JSONDecoder().raw_decode(t[ini:])
+    return obj
 
 
 class AnthropicProvider:

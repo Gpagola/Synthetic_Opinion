@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import random
+import time
 from collections import defaultdict
 
 from app.countries import (
@@ -271,14 +272,36 @@ def run_seed(country_code: str, nuevas: int, seed: int) -> None:
     db = SessionLocal()
     creadas = 0
     try:
+        n_lotes = (len(slots) + BATCH - 1) // BATCH
         for b in range(0, len(slots), BATCH):
             batch = slots[b:b + BATCH]
-            data = llm.complete_json(_system_prompt(country_code), _batch_prompt(country_code, batch))
-            for slot, pdata in zip(batch, data.get("personas", [])):
-                db.add(_merge(country_code, slot, pdata))
-                creadas += 1
-            db.commit()
-            print(f"  Lote {b // BATCH + 1}/{(len(slots) + BATCH - 1) // BATCH}: {creadas} acumuladas")
+            lote = b // BATCH + 1
+            # Reintentos con backoff: un error transitorio del LLM (rate limit,
+            # timeout) NO debe matar todo el seed. Si el lote falla tras varios
+            # intentos, se omite y se continúa con el siguiente.
+            data = None
+            for intento in range(5):
+                try:
+                    data = llm.complete_json(_system_prompt(country_code),
+                                             _batch_prompt(country_code, batch))
+                    break
+                except Exception as e:  # noqa: BLE001
+                    print(f"  Lote {lote}/{n_lotes}: error LLM ({type(e).__name__}: {e}); "
+                          f"reintento {intento + 1}/5")
+                    time.sleep(min(2 ** intento, 30))
+            if data is None:
+                print(f"  Lote {lote}/{n_lotes}: OMITIDO tras 5 fallos; sigo.")
+                continue
+            try:
+                for slot, pdata in zip(batch, data.get("personas", [])):
+                    db.add(_merge(country_code, slot, pdata))
+                    creadas += 1
+                db.commit()
+            except Exception as e:  # noqa: BLE001
+                db.rollback()
+                print(f"  Lote {lote}/{n_lotes}: error al guardar ({e}); lote descartado, sigo.")
+                continue
+            print(f"  Lote {lote}/{n_lotes}: {creadas} acumuladas")
         total = (
             db.query(Persona)
             .filter(Persona.activo.is_(True), Persona.pais == get_country(country_code)["codigo"])

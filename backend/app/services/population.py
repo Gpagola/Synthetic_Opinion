@@ -205,6 +205,8 @@ Para cada persona:
 - Coherencia con el slot y con la realidad de {c['nombre']} (nombres y apellidos típicos, ciudad
   concreta dentro de su región, ocupación, estudios e ingresos plausibles para su edad y zona,
   marcas y hábitos de consumo locales, moneda local).{extra}
+- "codigo_postal": código postal REAL y plausible de la ciudad/zona concreta de su región, con el
+  formato propio de {c['nombre']} (en España 5 dígitos cuyos 2 primeros identifican la provincia).
 - "bio": un perfil CLARO en 3-5 frases que explique quién es, su contexto vital y su carácter.
 - "opinion.posicionamientos": una POSTURA TOMADA y concreta sobre los principales temas de la
   sociedad actual de {c['nombre']}: {c['temas_pais']}. Coherente con su orientación política
@@ -219,7 +221,7 @@ Devuelve JSON con esta forma EXACTA:
       "tags": ["string"],
       "sociodemografico": {{
         "edad": 0, "genero": "string", "pais_origen": "string", "pais_residencia": "{c['nombre']}",
-        "region": "string", "nivel_educativo": "string", "ingresos": "string",
+        "region": "string", "codigo_postal": "string", "nivel_educativo": "string", "ingresos": "string",
         "ocupacion": "string", "estado_civil": "string", "hogar": "string"
       }},
       "consumidor": {{

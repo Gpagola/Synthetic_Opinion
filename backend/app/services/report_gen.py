@@ -9,7 +9,6 @@ from docx import Document
 from openpyxl import Workbook
 from sqlalchemy.orm import Session
 
-from app.config import settings
 from app.models import FocusGroup, Report
 from app.services.llm import get_llm
 
@@ -50,12 +49,8 @@ Devuelve un objeto JSON con esta forma:
 
 
 def generate_report(db: Session, fg: FocusGroup) -> Report:
-    llm = get_llm()
-    data = llm.complete_json(
-        _SYSTEM, _build_prompt(fg),
-        model=settings.openai_reasoning_model,
-        reasoning_effort=settings.openai_reasoning_effort,
-    )
+    llm = get_llm("anthropic")
+    data = llm.complete_json(_SYSTEM, _build_prompt(fg))
     contenido = data.get("markdown", "").strip() or "_No se pudo generar el informe._"
     metadatos = data.get("metadatos", {})
 

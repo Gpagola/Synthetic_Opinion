@@ -14,9 +14,15 @@ class Settings(BaseSettings):
     # OpenAI
     openai_api_key: str = ""
     openai_model: str = "gpt-4o"  # tareas sin razonamiento (personas, recruiting)
-    openai_reasoning_model: str = "gpt-5.5"  # focus group e informe
+    openai_reasoning_model: str = "gpt-5.5"  # encuestas (focus e informe usan Claude)
     openai_reasoning_effort: str = "high"
     openai_temperature: float = 0.9
+
+    # Anthropic (Focus Groups: turnos de conversación + informe final)
+    anthropic_api_key: str = ""
+    anthropic_model: str = "claude-opus-4-8"
+    anthropic_effort: str = "high"          # output_config.effort
+    anthropic_max_tokens: int = 16000
 
     # CORS
     cors_origins: str = "http://localhost:5173"

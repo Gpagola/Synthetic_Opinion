@@ -20,7 +20,6 @@ import random
 
 from sqlalchemy.orm import Session
 
-from app.config import settings
 from app.countries import country_name, cultural_context_block
 from app.database import SessionLocal
 from app.models import FocusGroup, Persona, Question, Response
@@ -117,7 +116,7 @@ def _detect_starter(pregunta: str, nombres: list[str]) -> str | None:
     texto = pregunta.lower()
     if not any(n.split()[0].lower() in texto for n in nombres if n):
         return None
-    llm = get_llm()
+    llm = get_llm("anthropic")
     system = (
         "Detectas si el moderador de un focus group pide que UNA persona concreta "
         "empiece o responda primero. Respondes SIEMPRE en JSON válido."
@@ -131,7 +130,7 @@ def _detect_starter(pregunta: str, nombres: list[str]) -> str | None:
         'JSON: {"starter": "<nombre exacto o null>"}'
     )
     try:
-        s = llm.complete_json(system, user).get("starter")
+        s = llm.complete_json(system, user, reasoning_effort="low").get("starter")
     except Exception:  # noqa: BLE001
         return None
     return s if s in nombres else None
@@ -212,7 +211,7 @@ def _answer(
     pregunta: str,
     turno_previas: list[tuple[str, str]],
 ) -> str:
-    llm = get_llm()
+    llm = get_llm("anthropic")
     system = _SYSTEM_TMPL.format(
         nombre=persona.nombre,
         idioma=idioma,
@@ -221,12 +220,8 @@ def _answer(
         perfil=_persona_perfil(persona),
     )
     user = _build_user_prompt(tema, transcript, pregunta, turno_previas, _estilo())
-    # GPT-5.5 con razonamiento alto para respuestas más ricas y coherentes
-    return llm.complete_text(
-        system, user,
-        model=settings.openai_reasoning_model,
-        reasoning_effort=settings.openai_reasoning_effort,
-    )
+    # Claude Opus 4.8 (adaptive thinking, effort alto) para respuestas ricas y coherentes
+    return llm.complete_text(system, user)
 
 
 def answer_question(focus_group_id: int, question_id: int) -> None:

@@ -41,6 +41,18 @@ jobs:
             -e "ssh -o StrictHostKeyChecking=no" \
             ./ "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/debian/Personae/"
 
+      - name: Ensure ANTHROPIC_API_KEY in server .env
+        env:
+          SSHPASS: ${{ secrets.SERVER_PASSWORD }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        # El .env vive en el servidor (el rsync lo excluye). Reescribimos la línea
+        # de la key desde el secret de GitHub para que los Focus Groups (Claude)
+        # tengan credenciales. Idempotente.
+        run: |
+          sshpass -e ssh -o StrictHostKeyChecking=no \
+            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
+            "ENV=/home/debian/Personae/backend/.env; touch \$ENV; grep -v '^ANTHROPIC_API_KEY=' \$ENV > \$ENV.tmp 2>/dev/null || true; echo 'ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}' >> \$ENV.tmp; mv \$ENV.tmp \$ENV; echo 'ANTHROPIC_API_KEY set in server .env'"
+
       - name: Rebuild & restart backend
         env:
           SSHPASS: ${{ secrets.SERVER_PASSWORD }}

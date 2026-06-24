@@ -1,0 +1,53 @@
+name: Seed Spain population
+
+# Ejecución manual (workflow_dispatch). Reutiliza los mismos secrets que el
+# deploy (SERVER_USER / SERVER_HOST / SERVER_PASSWORD) para conectarse por SSH a
+# sb0 y lanzar el seed DENTRO del contenedor del backend, que ya tiene el .env
+# (DATABASE_URL al MySQL de producción y la API key de OpenAI).
+
+on:
+  workflow_dispatch:
+    inputs:
+      count:
+        description: "Número de personas españolas a generar"
+        required: true
+        default: "600"
+      wipe:
+        description: "Borrar TODAS las personas de España antes de generar (re-seed limpio)"
+        type: boolean
+        required: false
+        default: false
+
+concurrency:
+  group: seed-spain
+  cancel-in-progress: false
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install ssh tools
+        run: sudo apt-get update && sudo apt-get install -y sshpass
+
+      - name: Wipe Spain population (optional, synchronous)
+        if: ${{ github.event.inputs.wipe == 'true' }}
+        env:
+          SSHPASS: ${{ secrets.SERVER_PASSWORD }}
+        # Borrado SÍNCRONO (rápido) antes de sembrar, para un re-seed limpio.
+        run: |
+          sshpass -e ssh -o StrictHostKeyChecking=no \
+            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
+            "docker exec personae-backend python wipe_country.py ES"
+
+      - name: Launch Spain seed (detached) inside backend container
+        env:
+          SSHPASS: ${{ secrets.SERVER_PASSWORD }}
+        # Lanzamos el seed DETACHED (docker exec -d) y con salida sin búfer
+        # (python -u) volcada a un log dentro del contenedor. Así el proceso
+        # sobrevive aunque la sesión SSH se corte por inactividad. El progreso
+        # se monitoriza luego por la API.
+        run: |
+          sshpass -e ssh -o StrictHostKeyChecking=no \
+            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
+            "docker exec -d personae-backend sh -c 'python -u seed_spain_pyramid.py ${{ github.event.inputs.count }} > /tmp/seed_es.log 2>&1'"
+          echo "Seed lanzado en segundo plano en el servidor (count=${{ github.event.inputs.count }})."

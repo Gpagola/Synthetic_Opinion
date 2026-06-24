@@ -71,6 +71,37 @@ _ES = {
         ("izquierda", 18), ("centro-izquierda", 22), ("centro", 18),
         ("centro-derecha", 20), ("derecha", 14), ("apolítico/abstencionista", 8),
     ],
+    # Educación: (etiqueta_natural_para_el_LLM, categoría_canónica, peso).
+    # Calibrado a la estructura educativa adulta de España (INE / Eurostat 2023:
+    # estructura "reloj de arena" con terciaria alta ~40% y bastante ISCED 0-2).
+    "educacion": [
+        ("Postgrado (máster o doctorado)",                       "Postgrado (máster/doctorado)",                  9),
+        ("Universitario (grado/licenciatura o FP superior)",     "Universitario (grado/diplomatura/FP superior)", 30),
+        ("FP de grado medio",                                    "Formación Profesional (grado medio)",           11),
+        ("Bachillerato",                                         "Bachillerato",                                  11),
+        ("Educación Secundaria Obligatoria (ESO)",               "Secundaria (1ª etapa / ESO)",                   22),
+        ("Educación primaria",                                   "Primaria",                                      11),
+        ("Sin estudios",                                         "Sin estudios",                                   6),
+    ],
+    # Clase de ingreso CONDICIONADA al nivel educativo (coherencia interna).
+    # España es menos desigual que Chile: más masa en el centro.
+    "ingresos_por_educacion": {
+        "Postgrado (máster/doctorado)":                  [("Alto", 30), ("Medio-alto", 38), ("Medio", 27), ("Medio-bajo", 5), ("Bajo", 0)],
+        "Universitario (grado/diplomatura/FP superior)": [("Alto", 14), ("Medio-alto", 32), ("Medio", 38), ("Medio-bajo", 12), ("Bajo", 4)],
+        "Formación Profesional (grado medio)":           [("Alto", 3), ("Medio-alto", 14), ("Medio", 45), ("Medio-bajo", 28), ("Bajo", 10)],
+        "Bachillerato":                                  [("Alto", 2), ("Medio-alto", 10), ("Medio", 42), ("Medio-bajo", 32), ("Bajo", 14)],
+        "Secundaria (1ª etapa / ESO)":                   [("Alto", 1), ("Medio-alto", 6), ("Medio", 33), ("Medio-bajo", 38), ("Bajo", 22)],
+        "Primaria":                                      [("Alto", 0), ("Medio-alto", 3), ("Medio", 20), ("Medio-bajo", 40), ("Bajo", 37)],
+        "Sin estudios":                                  [("Alto", 0), ("Medio-alto", 1), ("Medio", 12), ("Medio-bajo", 30), ("Bajo", 57)],
+    },
+    # Anclas de ingreso mensual neto (€) por clase, para importes realistas.
+    "ingresos_anclas": {
+        "Bajo":       "menos de 1.000 € al mes",
+        "Medio-bajo": "entre 1.000 y 1.500 € al mes",
+        "Medio":      "entre 1.500 y 2.500 € al mes",
+        "Medio-alto": "entre 2.500 y 4.000 € al mes",
+        "Alto":       "más de 4.000 € al mes",
+    },
     # Temas de debate público del país (para posicionamientos en la generación)
     "temas_pais": (
         "inmigración, vivienda y alquiler, economía y empleo, sanidad y servicios "

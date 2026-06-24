@@ -191,9 +191,9 @@ def _batch_prompt(country_code: str, slots_batch: list[dict]) -> str:
             f"\n- ADEMÁS, respeta EXACTAMENTE `nivel_educativo` (nivel de estudios) y "
             f"`nivel_ingresos` (clase socioeconómica) de cada slot. La ocupación, la bio y el "
             f"estilo de vida deben ser coherentes con ese nivel educativo y esa clase.\n"
-            f"- El campo `ingresos` que devuelvas debe ser un IMPORTE realista en pesos chilenos "
-            f"coherente con la clase `nivel_ingresos` del slot, según estas anclas mensuales "
-            f"líquidas: {anclas}. Copia `nivel_educativo` y `nivel_ingresos` tal cual en la salida."
+            f"- El campo `ingresos` que devuelvas debe ser un IMPORTE realista en la moneda local "
+            f"de {c['nombre']}, coherente con la clase `nivel_ingresos` del slot, según estas anclas "
+            f"mensuales: {anclas}. Copia `nivel_educativo` y `nivel_ingresos` tal cual en la salida."
         )
     return f"""Genera una persona por cada SLOT asignado. Respeta EXACTAMENTE la edad, género,
 región, país de origen y orientación política de cada slot (todos residen en {c['nombre']}).

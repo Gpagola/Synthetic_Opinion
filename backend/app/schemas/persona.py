@@ -1,9 +1,15 @@
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class Sociodemografico(BaseModel):
+    # extra="allow": conserva y expone por la API cualquier clave adicional del
+    # JSON (los 8 sub-objetos de enriquecimiento: hogar_familia, vehiculos, banca,
+    # seguros, telecom, digital, laboral, consumo_habitos, y la marca `enriquecido`),
+    # sin tener que declararlas una a una. Evita el bug de "claves descartadas".
+    model_config = ConfigDict(extra="allow")
+
     edad: int | None = None
     genero: str | None = None
     pais_origen: str | None = None

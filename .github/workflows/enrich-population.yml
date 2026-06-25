@@ -1,0 +1,39 @@
+name: Enrich population
+
+# Ejecución manual. Enriquece (matices A–H) la población del país elegido, sin
+# borrar ni regenerar nada: solo añade los 8 sub-objetos a las personas que aún
+# no los tengan. Reutiliza los secrets del deploy para entrar por SSH a sb0 y
+# lanzar el proceso DENTRO del contenedor del backend (que tiene el .env).
+
+on:
+  workflow_dispatch:
+    inputs:
+      country:
+        description: "País a enriquecer"
+        type: choice
+        options: ["ES", "CL"]
+        required: true
+        default: "ES"
+
+concurrency:
+  group: enrich-population
+  cancel-in-progress: false
+
+jobs:
+  enrich:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install ssh tools
+        run: sudo apt-get update && sudo apt-get install -y sshpass
+
+      - name: Launch enrichment (detached) inside backend container
+        env:
+          SSHPASS: ${{ secrets.SERVER_PASSWORD }}
+        # Detached (docker exec -d) y sin búfer (python -u), log dentro del
+        # contenedor. Sobrevive a cortes de SSH; el avance se ve por la API.
+        run: |
+          C="${{ github.event.inputs.country }}"
+          sshpass -e ssh -o StrictHostKeyChecking=no \
+            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
+            "docker exec -d personae-backend sh -c 'python -u enrich_population.py ${C} > /tmp/enrich_${C}.log 2>&1'"
+          echo "Enriquecimiento lanzado en segundo plano (país=${C})."

@@ -102,6 +102,44 @@ _ES = {
         "Medio-alto": "entre 2.500 y 4.000 € al mes",
         "Alto":       "más de 4.000 € al mes",
     },
+    # Enriquecimiento (matices A–H). Marcas reales por cuota de mercado aproximada
+    # y ratios España. Las listas son (valor, peso) para sortear con `weighted()`.
+    "enrichment": {
+        "bancos": [
+            ("CaixaBank", 24), ("Banco Santander", 20), ("BBVA", 18), ("Banco Sabadell", 10),
+            ("ING", 8), ("Bankinter", 6), ("Unicaja", 5), ("Kutxabank", 4), ("Abanca", 3), ("Openbank", 2),
+        ],
+        "bancos_digitales": ["Revolut", "N26", "Openbank", "imagin", "Bnext"],
+        "aseguradoras": [
+            ("Mapfre", 20), ("Mutua Madrileña", 14), ("Línea Directa", 10), ("AXA", 9),
+            ("Allianz", 8), ("Generali", 7), ("Catalana Occidente", 6), ("Zurich", 5),
+            ("Pelayo", 4), ("Reale", 4), ("Verti", 4), ("otra", 9),
+        ],
+        "salud_privada": ["Sanitas", "Adeslas", "DKV", "Asisa", "Mapfre Salud", "Cigna"],
+        "operadores_movil": [
+            ("Movistar", 27), ("Orange", 19), ("Vodafone", 17), ("Digi", 13), ("Yoigo", 8),
+            ("MásMóvil", 7), ("Pepephone", 3), ("O2", 3), ("Simyo", 3),
+        ],
+        "supermercados": [
+            ("Mercadona", 26), ("Carrefour", 14), ("Lidl", 12), ("Día", 6), ("Aldi", 6),
+            ("Eroski", 5), ("Alcampo", 5), ("Consum", 4), ("El Corte Inglés", 4), ("otro/mercado local", 18),
+        ],
+        "marcas_coche": [
+            ("SEAT", 12), ("Volkswagen", 9), ("Renault", 9), ("Peugeot", 8), ("Toyota", 8),
+            ("Citroën", 6), ("Hyundai", 6), ("Kia", 6), ("Ford", 6), ("Opel", 6), ("Dacia", 6),
+            ("Nissan", 4), ("Mercedes-Benz", 4), ("BMW", 4), ("Audi", 4), ("otra", 6),
+        ],
+        "marcas_coche_premium": ["Mercedes-Benz", "BMW", "Audi", "Volvo", "Lexus", "Tesla"],
+        # ratios España (valor, peso)
+        "regimen_vivienda": [
+            ("propiedad sin hipoteca", 38), ("propiedad con hipoteca", 28),
+            ("alquiler", 26), ("cedida/familiar", 8),
+        ],
+        "combustible": [("gasolina", 48), ("diésel", 32), ("híbrido", 14), ("eléctrico", 6)],
+        "tipo_colegio": [("pública", 67), ("concertada", 25), ("privada", 8)],
+        "pct_salud_privada": 0.25,   # se modula por ingresos en enrichment.py
+        "etiqueta_salud_publica": "Seguridad Social (sanidad pública)",
+    },
     # Temas de debate público del país (para posicionamientos en la generación)
     "temas_pais": (
         "inmigración, vivienda y alquiler, economía y empleo, sanidad y servicios "
@@ -237,6 +275,42 @@ _CL = {
         "Medio":      "entre $900.000 y $1.800.000 CLP al mes",
         "Medio-alto": "entre $1.800.000 y $3.500.000 CLP al mes",
         "Alto":       "más de $3.500.000 CLP al mes",
+    },
+    # Enriquecimiento (matices A–H). Marcas reales por cuota de mercado aproximada
+    # y ratios Chile. Listas (valor, peso) para sortear con `weighted()`.
+    "enrichment": {
+        "bancos": [
+            ("BancoEstado", 30), ("Banco de Chile", 18), ("Santander", 18), ("BCI", 14),
+            ("Scotiabank", 8), ("Itaú", 6), ("Banco Falabella", 4), ("BICE", 2),
+        ],
+        "bancos_digitales": ["MACH", "Tenpo", "Mercado Pago", "Copec Pay", "Tapp"],
+        "aseguradoras": [
+            ("Consorcio", 18), ("SURA", 16), ("BCI Seguros", 14), ("Mapfre", 12),
+            ("Zurich", 9), ("HDI", 8), ("Liberty", 7), ("Chilena Consolidada", 6), ("otra", 10),
+        ],
+        # En Chile la salud privada son las Isapres
+        "salud_privada": ["Banmédica", "Consalud", "Cruz Blanca", "Colmena", "Nueva Masvida", "Vida Tres"],
+        "operadores_movil": [
+            ("Entel", 32), ("Movistar", 26), ("WOM", 22), ("Claro", 16), ("VTR/otro", 4),
+        ],
+        "supermercados": [
+            ("Líder (Walmart)", 30), ("Jumbo", 16), ("Unimarc", 16), ("Santa Isabel", 14),
+            ("Tottus", 10), ("otro/feria", 14),
+        ],
+        "marcas_coche": [
+            ("Chevrolet", 12), ("Suzuki", 11), ("Hyundai", 10), ("Kia", 9), ("Toyota", 9),
+            ("Nissan", 8), ("Mitsubishi", 6), ("Mazda", 6), ("Peugeot", 5), ("MG", 6),
+            ("Changan", 5), ("Volkswagen", 4), ("otra", 9),
+        ],
+        "marcas_coche_premium": ["Mercedes-Benz", "BMW", "Audi", "Volvo", "Lexus"],
+        "regimen_vivienda": [
+            ("propiedad sin hipoteca/dividendo", 40), ("propiedad con dividendo (crédito)", 22),
+            ("arriendo", 30), ("cedida/allegado", 8),
+        ],
+        "combustible": [("gasolina/bencina", 70), ("diésel", 22), ("híbrido", 6), ("eléctrico", 2)],
+        "tipo_colegio": [("municipal/público", 35), ("particular subvencionado", 50), ("particular pagado", 15)],
+        "pct_salud_privada": 0.18,   # cuota Isapre (se modula por ingresos)
+        "etiqueta_salud_publica": "Fonasa (salud pública)",
     },
     "temas_pais": (
         "pensiones (AFP) y reforma previsional, delincuencia y seguridad ciudadana, "

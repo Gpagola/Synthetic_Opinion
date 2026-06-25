@@ -689,6 +689,8 @@ function PersonaEditor({
         <div><label>Bio (narrativa del personaje)</label>
           <textarea rows={3} value={p.bio} onChange={(e) => setP({ ...p, bio: e.target.value })} /></div>
 
+        <Matices sd={sd} />
+
         <div className="flex-between" style={{ marginTop: "1rem" }}>
           <button className="secondary" onClick={onClose}>Cancelar</button>
           <button onClick={save} disabled={saving || !p.nombre}>
@@ -697,6 +699,54 @@ function PersonaEditor({
         </div>
       </div>
     </div>
+  );
+}
+
+// ---------- Sección "Matices" (solo lectura) del enriquecimiento A–H ----------
+
+function Matices({ sd }: { sd: any }) {
+  if (!sd?.enriquecido) return null;
+  const A = sd.hogar_familia ?? {}, B = sd.vehiculos ?? {}, C = sd.banca ?? {},
+        D = sd.seguros ?? {}, E = sd.telecom ?? {}, F = sd.digital ?? {},
+        G = sd.laboral ?? {}, H = sd.consumo_habitos ?? {};
+  const lista = (xs: any) => (Array.isArray(xs) && xs.length ? xs.join(", ") : "—");
+  const veh = B.tiene_vehiculo
+    ? [B.principal?.marca, B.principal?.modelo].filter(Boolean).join(" ")
+      + ` · ${B.principal?.combustible ?? ""} · ${B.principal?.antiguedad_anios ?? "?"} años`
+      + ` · ${B.principal?.adquisicion ?? ""} · ${B.principal?.financiacion ?? ""}`
+    : "Sin vehículo" + (B.usa_transporte_publico ? " · usa transporte público" : "");
+  const hijos = A.tiene_hijos
+    ? `${A.num_hijos} (edades: ${lista(A.edades_hijos)})` + (A.monoparental ? " · monoparental" : "")
+    : "Sin hijos";
+  const colegio = A.tipo_colegio_hijos
+    ? A.tipo_colegio_hijos + (A.colegio_nombre ? " · " + A.colegio_nombre : "") : "—";
+  const polizas = (D.polizas ?? []).map((x: any) => `${x.tipo} (${x.compania})`).join(", ") || "—";
+  const salud = D.salud ? `${D.salud.cobertura} · ${D.salud.compania}` : "—";
+  const banco = (C.banco_principal ?? "—")
+    + (C.bancos_secundarios?.length ? ` (+${C.bancos_secundarios.join(", ")})` : "");
+  return (
+    <>
+      <h3>Matices</h3>
+      <div className="muted" style={{ fontSize: "0.85rem", lineHeight: 1.6 }}>
+        <p><strong>Hogar/familia:</strong> {A.convivencia} · vivienda: {A.regimen_vivienda} · hijos: {hijos}
+          {" "}· colegio: {colegio} · mascotas: {A.mascotas}
+          {A.cuida_dependientes ? " · cuida dependientes" : ""}
+          {A.hijos_necesidades_especiales ? " · hijo con necesidades especiales" : ""}
+          {A.hijos_adoptados ? " · hijo adoptado" : ""}</p>
+        <p><strong>Vehículo:</strong> {veh}</p>
+        <p><strong>Banca:</strong> {banco} · {C.tipo} · productos: {lista(C.productos)}
+          {" "}· endeudamiento: {C.nivel_endeudamiento} · {C.perfil_ahorro}</p>
+        <p><strong>Seguros:</strong> salud: {salud} · pólizas: {polizas}</p>
+        <p><strong>Telecom:</strong> {E.operador_movil} ({E.modalidad})
+          {E.convergente_fibra ? " · fibra" : ""} · {E.smartphone}</p>
+        <p><strong>Digital:</strong> adopción {F.adopcion_digital} · redes: {lista(F.redes_sociales)}
+          {" "}· streaming: {lista(F.streaming)}{F.compra_online ? " · compra online" : ""}</p>
+        <p><strong>Laboral:</strong> {G.situacion} · {G.tipo_contrato} · teletrabajo: {G.teletrabajo}
+          {" "}· sector: {G.sector ?? "—"} · {G.tamano_empresa}</p>
+        <p><strong>Consumo/hábitos:</strong> súper: {H.supermercado_habitual} · actividad: {H.actividad_fisica}
+          {" "}· {H.fumador ? "fumador" : "no fumador"} · alcohol: {H.consumo_alcohol}</p>
+      </div>
+    </>
   );
 }
 

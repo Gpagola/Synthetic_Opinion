@@ -2,19 +2,17 @@
 Uso:  python reset_survey.py <survey_id>
 """
 import sys
+from sqlalchemy import text
 from app.database import SessionLocal
-from app.models.survey import Survey
 
 sid = int(sys.argv[1]) if len(sys.argv) > 1 else None
 if not sid:
     sys.exit("Uso: python reset_survey.py <survey_id>")
 db = SessionLocal()
-s = db.get(Survey, sid)
-if not s:
+row = db.execute(text("SELECT nombre FROM survey WHERE id=:id"), {"id": sid}).fetchone()
+if not row:
     sys.exit(f"Encuesta {sid} no encontrada.")
-nombre = s.nombre  # capturar antes del commit
-s.estado = "draft"
-s.error_msg = None
+db.execute(text("UPDATE survey SET estado='draft', error_msg=NULL WHERE id=:id"), {"id": sid})
 db.commit()
 db.close()
-print(f"Encuesta {sid} ('{nombre}') reseteada a draft.")
+print(f"Encuesta {sid} ('{row[0]}') reseteada a draft.")

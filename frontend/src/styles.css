@@ -782,17 +782,50 @@ details.card[open] summary::before { content: "▾ "; }
   pointer-events: none;
   z-index: 0;
 }
-.landing-title {
-  position: relative;
+/* Bloque al pie, a la derecha; todo alineado a la izquierda entre sí
+   (Personæ, la frase y la primera tarjeta comparten borde izquierdo). */
+.landing-content {
+  position: absolute;
+  right: clamp(1.5rem, 5vw, 5.5rem);
+  bottom: clamp(1.5rem, 5vh, 4rem);
   z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  gap: clamp(0.5rem, 1.4vh, 1.1rem);
+  max-width: 92vw;
+}
+.landing-title {
   font-family: "Alliance No.2", system-ui, sans-serif;
   font-weight: 300;
-  font-size: clamp(3.5rem, 13vw, 12rem);
+  font-size: clamp(3rem, 9vw, 8rem);
   line-height: 0.92;
   letter-spacing: -0.02em;
   margin: 0;
   color: #fff;
   text-shadow: 0 2px 40px rgba(0, 0, 0, 0.6);
+}
+.landing-tagline {
+  font-family: Georgia, "Times New Roman", "Personae Sans", serif;
+  font-style: italic;
+  font-size: clamp(0.95rem, 1.8vw, 1.5rem);
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0 0 clamp(0.4rem, 1vh, 0.9rem);
+  text-shadow: 0 1px 24px rgba(0, 0, 0, 0.6);
+}
+/* Crédito Andersen Consulting, abajo a la izquierda, pequeño, en blanco. */
+.landing-credit {
+  position: absolute;
+  left: clamp(1.5rem, 5vw, 5.5rem);
+  bottom: clamp(1.5rem, 5vh, 4rem);
+  z-index: 1;
+  color: #fff;
+  font-family: "Alliance No.1", system-ui, sans-serif;
+  font-size: clamp(0.8rem, 1.2vw, 1rem);
+  letter-spacing: 0.06em;
+  opacity: 0.92;
+  text-shadow: 0 1px 24px rgba(0, 0, 0, 0.6);
 }
 .landing-cards {
   position: relative;

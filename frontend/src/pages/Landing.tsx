@@ -102,10 +102,14 @@ export default function Landing() {
   return (
     <div className="landing">
       <Orb />
-      <h1 className="landing-title">Personæ</h1>
-      <div className="landing-cards">
-        <button className="country-card" onClick={() => go("CL")}>CHILE</button>
-        <button className="country-card" onClick={() => go("ES")}>ESPAÑA</button>
+      <div className="landing-credit">Andersen Consulting</div>
+      <div className="landing-content">
+        <h1 className="landing-title">Personæ</h1>
+        <p className="landing-tagline">the masks through which a synthetic population speaks</p>
+        <div className="landing-cards">
+          <button className="country-card" onClick={() => go("CL")}>CHILE</button>
+          <button className="country-card" onClick={() => go("ES")}>SPAIN</button>
+        </div>
       </div>
     </div>
   );

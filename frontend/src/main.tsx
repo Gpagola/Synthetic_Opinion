@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
 import ReactDOM from "react-dom/client";
-import { BrowserRouter, Navigate, Route, Routes, NavLink } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, NavLink, Outlet } from "react-router-dom";
 import PersonasPage from "./pages/PersonasPage";
 import FocusGroupsPage from "./pages/FocusGroupsPage";
 import SurveysPage from "./pages/SurveysPage";
+import Landing from "./pages/Landing";
 import HelpModal from "./components/HelpModal";
 import ImportantModal from "./components/ImportantModal";
 import { CountryProvider, useCountry } from "./CountryContext";
@@ -81,7 +82,7 @@ function Layout() {
     <div className="app">
       <header className="topbar">
         <div className="topbar-inner">
-          <div className="brand">
+          <NavLink to="/" className="brand" title="Portada">
             <Logo />
             <div className="brand-text">
               <span className="brand-name">Personæ</span>
@@ -89,7 +90,7 @@ function Layout() {
                 Desarrollado por Braintrust CS firma miembro de Andersen Consulting
               </span>
             </div>
-          </div>
+          </NavLink>
           <nav>
             <NavLink to="/personas">Población</NavLink>
             <NavLink to="/focus-groups">Focus</NavLink>
@@ -122,14 +123,23 @@ function Layout() {
       {help && <HelpModal onClose={() => setHelp(false)} />}
       {important && <ImportantModal onClose={() => setImportant(false)} />}
       <main className="content">
-        <Routes>
-          <Route path="/" element={<Navigate to="/personas" replace />} />
-          <Route path="/personas" element={<PersonasPage />} />
-          <Route path="/focus-groups" element={<FocusGroupsPage />} />
-          <Route path="/surveys" element={<SurveysPage />} />
-        </Routes>
+        <Outlet />
       </main>
     </div>
+  );
+}
+
+function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/" element={<Landing />} />
+      <Route element={<Layout />}>
+        <Route path="/personas" element={<PersonasPage />} />
+        <Route path="/focus-groups" element={<FocusGroupsPage />} />
+        <Route path="/surveys" element={<SurveysPage />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
 
@@ -137,7 +147,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <BrowserRouter basename={import.meta.env.BASE_URL}>
       <CountryProvider>
-        <Layout />
+        <AppRoutes />
       </CountryProvider>
     </BrowserRouter>
   </React.StrictMode>

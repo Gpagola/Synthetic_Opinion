@@ -757,3 +757,58 @@ details.card summary { color: var(--text); list-style: none; }
 details.card summary::-webkit-details-marker { display: none; }
 details.card summary::before { content: "▸ "; color: var(--muted); }
 details.card[open] summary::before { content: "▾ "; }
+
+/* ====================== Pantalla de inicio (Landing) ====================== */
+.landing {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(1.2rem, 3vh, 2.6rem);
+  overflow: hidden;
+  z-index: 50;
+}
+.orb-canvas {
+  width: min(46vw, 440px);
+  height: min(46vw, 440px);
+  display: block;
+}
+.landing-title {
+  font-family: "Alliance No.2", system-ui, sans-serif;
+  font-weight: 300;
+  font-size: clamp(3.5rem, 13vw, 12rem);
+  line-height: 0.92;
+  letter-spacing: -0.02em;
+  margin: 0;
+  color: #fff;
+}
+.landing-cards {
+  display: flex;
+  gap: clamp(1rem, 2.5vw, 2rem);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.country-card {
+  background: #C5FF02;
+  color: #0a0a0a;
+  border: none;
+  border-radius: 16px;
+  font-family: "Alliance No.2", system-ui, sans-serif;
+  font-weight: 500;
+  font-size: clamp(1.1rem, 1.6vw, 1.5rem);
+  letter-spacing: 0.1em;
+  padding: 1.05rem 3.4rem;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.country-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 34px rgba(197, 255, 2, 0.28);
+}
+.country-card:active { transform: translateY(-1px); }
+
+a.brand { text-decoration: none; color: inherit; }

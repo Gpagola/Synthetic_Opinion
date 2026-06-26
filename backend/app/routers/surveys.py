@@ -160,7 +160,7 @@ async def parse_file(
     text = _extract_text(content, file.filename or "")
     if not text.strip():
         raise HTTPException(status_code=422, detail="No se pudo extraer texto del fichero.")
-    llm = get_llm()
+    llm = get_llm("anthropic")  # importador usa Claude (OpenAI puede estar al límite de cuota)
     user_prompt = (
         f"Analiza el siguiente cuestionario (idioma: {idioma}, país: {pais}) y "
         f"conviértelo al esquema JSON pedido:\n\n{_IMPORT_SCHEMA}\n\n"

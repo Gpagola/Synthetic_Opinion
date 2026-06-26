@@ -77,16 +77,74 @@ def _q_spec(q) -> str:
     return ""
 
 
+def _compute_path(questions: list, respuestas: dict) -> list[int]:
+    """Simula el recorrido de una persona por el cuestionario dado sus respuestas.
+    Devuelve lista de `orden` (0-based) de las preguntas que habría alcanzado."""
+    by_orden = {q.orden: q for q in questions}
+    if not by_orden:
+        return []
+    current = 0
+    path = []
+    max_steps = len(questions) + 2  # guarda infinita
+    steps = 0
+    while current is not None and steps < max_steps:
+        steps += 1
+        q = by_orden.get(current)
+        if q is None:
+            break
+        path.append(current)
+        # Buscar salto condicional
+        conds = q.condiciones if hasattr(q, "condiciones") else []
+        respuesta = respuestas.get(str(q.id), respuestas.get(q.id))
+        resp_str = str(respuesta) if respuesta is not None else None
+        jumped = False
+        for rule in (conds or []):
+            si_resp = rule.get("si_respuesta") if isinstance(rule, dict) else getattr(rule, "si_respuesta", None)
+            ir_a = rule.get("ir_a_orden") if isinstance(rule, dict) else getattr(rule, "ir_a_orden", None)
+            if resp_str == str(si_resp):
+                current = ir_a  # None → fin
+                jumped = True
+                break
+        if not jumped:
+            # Sin salto: siguiente pregunta en orden
+            next_ordenes = sorted(o for o in by_orden if o > current)
+            current = next_ordenes[0] if next_ordenes else None
+    return path
+
+
 def _build_prompt(survey: Survey) -> str:
+    """Construye el prompt para la IA, incluyendo instrucciones de skip logic si hay condiciones."""
+    has_conditions = any(
+        (q.condiciones if hasattr(q, "condiciones") else [])
+        for q in survey.questions
+    )
     lines = []
     for q in survey.questions:
-        lines.append(f'- id {q.id} [{q.tipo}] "{q.texto}" -> {_q_spec(q)}')
+        n = q.orden + 1
+        conds = q.condiciones if hasattr(q, "condiciones") else []
+        line = f'- P{n} [id={q.id}, orden={q.orden}, tipo={q.tipo}] "{q.texto}" -> {_q_spec(q)}'
+        if conds:
+            for rule in conds:
+                si = rule.get("si_respuesta") if isinstance(rule, dict) else getattr(rule, "si_respuesta", None)
+                ir = rule.get("ir_a_orden") if isinstance(rule, dict) else getattr(rule, "ir_a_orden", None)
+                destino = f"P{ir + 1}" if ir is not None else "FIN"
+                line += f'\n    → Si responde "{si}" → saltar a {destino}'
+        lines.append(line)
+
+    instruccion = (
+        "Sigue las instrucciones de salto (→): si una condición aplica, salta a la pregunta "
+        "indicada y NO respondas las preguntas intermedias. Responde SOLO las preguntas que "
+        "alcanzarías. "
+        if has_conditions else
+        "Responde a TODAS las preguntas. "
+    )
     return (
         f"Tema de la encuesta: {survey.tema}\n"
-        "Responde a TODAS las preguntas como esta persona (según su perfil), de forma honesta y "
-        "coherente con quién es. Preguntas:\n" + "\n".join(lines) + "\n\n"
-        'Devuelve SOLO un JSON {"respuestas": {"<id>": valor, ...}} con el valor del tipo indicado '
-        "para cada id. No añadas texto fuera del JSON."
+        f"{instruccion}Hazlo de forma honesta y coherente con tu perfil.\n\n"
+        "Preguntas:\n" + "\n".join(lines) + "\n\n"
+        'Devuelve SOLO un JSON {"respuestas": {"<orden>": valor, ...}} usando el ORDEN (0-based) '
+        "como clave, con el valor del tipo indicado para cada pregunta respondida. "
+        "No añadas texto fuera del JSON."
     )
 
 
@@ -142,14 +200,18 @@ def answer_survey(survey_id: int, persona_ids: list[int], modelo: str,
         contexto_pais = cultural_context_block(survey.pais)
         prompt = _build_prompt(survey)
         # Specs de preguntas como objetos planos para validar sin tocar la sesión.
-        questions = [SimpleNamespace(id=q.id, tipo=q.tipo, opciones=list(q.opciones))
-                     for q in survey.questions]
+        questions = [SimpleNamespace(
+            id=q.id, tipo=q.tipo, opciones=list(q.opciones), orden=q.orden,
+            condiciones=list(q.condiciones) if q.condiciones else [],
+        ) for q in survey.questions]
         # IMPORTANTE: materializamos todos los datos de persona AQUÍ (hilo principal).
         # Tras los commits, los objetos ORM se expiran; si los hilos accedieran a sus
         # atributos dispararían lazy-loads concurrentes sobre la misma conexión MySQL
         # ("Packet sequence number wrong"). Los hilos solo reciben datos planos.
         items = [(p.id, p.nombre, _perfil(p), _snapshot(p)) for p in ordered]
         llm = get_llm()
+
+        by_orden = {q.orden: q for q in questions}
 
         def ask(item):
             pid, nombre, perfil, _snap = item
@@ -166,14 +228,20 @@ def answer_survey(survey_id: int, persona_ids: list[int], modelo: str,
 
         snapshots = {pid: snap for pid, _n, _p, snap in items}
         with ThreadPoolExecutor(max_workers=8) as ex:
-            for i, (pid, raw) in enumerate(ex.map(ask, items), 1):
-                if raw is None:
+            for i, (pid, raw_by_orden) in enumerate(ex.map(ask, items), 1):
+                if raw_by_orden is None:
                     continue
-                resp = {}
+                # Construir respuestas normalizadas (clave = str(q.id))
+                resp_by_id: dict = {}
                 for q in questions:
-                    v = _validate(q, raw.get(str(q.id), raw.get(q.id)))
+                    raw_val = raw_by_orden.get(str(q.orden), raw_by_orden.get(q.orden))
+                    v = _validate(q, raw_val)
                     if v is not None:
-                        resp[str(q.id)] = v
+                        resp_by_id[str(q.id)] = v
+                # Calcular el path real y conservar solo las preguntas del camino
+                path = _compute_path(questions, resp_by_id)
+                path_ids = {str(by_orden[o].id) for o in path if o in by_orden}
+                resp = {k: v for k, v in resp_by_id.items() if k in path_ids}
                 db.add(SurveyResponse(
                     survey_id=survey_id, persona_id=pid,
                     snapshot=snapshots.get(pid), respuestas=resp,

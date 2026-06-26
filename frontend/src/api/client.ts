@@ -119,13 +119,18 @@ export interface Report {
 }
 
 // ---------- Encuestas ----------
+export interface ConditionRule {
+  si_respuesta: string;
+  ir_a_orden: number | null;
+}
 export interface SurveyQuestion {
   id: number;
   texto: string;
-  tipo: string; // single | multiple | yesno | likert | nps
+  tipo: string; // single | multiple | yesno | likert | nps | abierta
   opciones: string[];
   orden: number;
   obligatoria: boolean;
+  condiciones: ConditionRule[];
 }
 export interface Survey {
   id: number;
@@ -146,6 +151,12 @@ export interface QuestionIn {
   tipo: string;
   opciones: string[];
   obligatoria?: boolean;
+  condiciones?: ConditionRule[];
+}
+export interface SurveyImportDraft {
+  nombre: string;
+  tema: string;
+  preguntas: QuestionIn[];
 }
 export interface OptionStat { opcion: string; n: number; pct: number; }
 export interface QuestionResult {
@@ -265,4 +276,16 @@ export const api = {
   surveyResults: (id: number, breakVar: string) =>
     req<SurveyResults>(`/surveys/${id}/results${breakVar ? `?break_var=${breakVar}` : ""}`),
   surveyExportUrl: (id: number) => `${BASE}/surveys/${id}/export`,
+  parseFileSurvey: async (file: File, idioma: string, pais: string): Promise<SurveyImportDraft> => {
+    const form = new FormData();
+    form.append("file", file);
+    form.append("idioma", idioma);
+    form.append("pais", pais);
+    const resp = await fetch(`${BASE}/surveys/parse-file`, { method: "POST", body: form });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+      throw new Error(err.detail ?? resp.statusText);
+    }
+    return resp.json();
+  },
 };

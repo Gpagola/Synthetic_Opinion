@@ -1,4 +1,6 @@
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+import io
+
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import Response as FastAPIResponse
 from sqlalchemy.orm import Session
 
@@ -9,10 +11,12 @@ from app.schemas.survey import (
     QuestionsUpdate,
     StatusOut,
     SurveyCreate,
+    SurveyImportDraft,
     SurveyListItem,
     SurveyOut,
 )
 from app.services import survey_engine
+from app.services.llm import _extract_json, get_llm
 
 router = APIRouter(prefix="/surveys", tags=["surveys"])
 
@@ -57,6 +61,7 @@ def set_questions(sid: int, payload: QuestionsUpdate, db: Session = Depends(get_
         db.add(SurveyQuestion(
             survey_id=sid, texto=q.texto, tipo=q.tipo,
             opciones=q.opciones, orden=i, obligatoria=q.obligatoria,
+            condiciones=[c.model_dump() for c in q.condiciones],
         ))
     db.commit()
     db.refresh(s)
@@ -93,6 +98,83 @@ def status(sid: int, db: Session = Depends(get_db)):
 @router.get("/{sid}/results")
 def results(sid: int, break_var: str | None = None, db: Session = Depends(get_db)):
     return survey_engine.compute_results(db, _get(db, sid), break_var)
+
+
+_IMPORT_SYSTEM = """Eres experto en investigación de mercados. Analizas cuestionarios escritos en
+cualquier formato y los conviertes a un JSON estructurado.
+Tipos de pregunta disponibles: single (opción única), multiple (opción múltiple),
+yesno (sí/no), likert (escala 1-5), nps (0-10), abierta (texto libre).
+Responde SIEMPRE en JSON válido, sin texto fuera del JSON."""
+
+_IMPORT_SCHEMA = """{
+  "nombre": "Nombre del cuestionario",
+  "tema": "Tema o contexto",
+  "preguntas": [
+    {
+      "texto": "Texto de la pregunta",
+      "tipo": "single|multiple|yesno|likert|nps|abierta",
+      "opciones": ["opción A", "opción B"],
+      "condiciones": [
+        {"si_respuesta": "No", "ir_a_orden": 3}
+      ]
+    }
+  ]
+}
+NOTAS:
+- opciones: [] para yesno, likert, nps, abierta.
+- condiciones: [] si no hay saltos. ir_a_orden es el índice 0-based de la pregunta destino
+  (la posición en el array, empezando en 0). null en ir_a_orden = terminar encuesta.
+- Detecta saltos como "Si responde No, saltar a P5", "Si SÍ, ir a la pregunta 7", etc.
+- El primer índice es 0."""
+
+
+def _extract_text(file_bytes: bytes, filename: str) -> str:
+    name = (filename or "").lower()
+    if name.endswith(".pdf"):
+        import pdfplumber  # ya instalado
+        text_parts = []
+        with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
+            for page in pdf.pages:
+                t = page.extract_text()
+                if t:
+                    text_parts.append(t)
+        return "\n".join(text_parts)
+    if name.endswith((".docx", ".doc")):
+        from docx import Document  # ya instalado
+        doc = Document(io.BytesIO(file_bytes))
+        return "\n".join(p.text for p in doc.paragraphs if p.text.strip())
+    # Fallback: intentar como UTF-8
+    return file_bytes.decode("utf-8", errors="replace")
+
+
+@router.post("/parse-file", response_model=SurveyImportDraft)
+async def parse_file(
+    file: UploadFile = File(...),
+    idioma: str = Form(default="es"),
+    pais: str = Form(default="ES"),
+) -> SurveyImportDraft:
+    """Importa un cuestionario desde PDF o Word. Devuelve el borrador para revisión (no guarda)."""
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="El fichero está vacío.")
+    text = _extract_text(content, file.filename or "")
+    if not text.strip():
+        raise HTTPException(status_code=422, detail="No se pudo extraer texto del fichero.")
+    llm = get_llm()
+    user_prompt = (
+        f"Analiza el siguiente cuestionario (idioma: {idioma}, país: {pais}) y "
+        f"conviértelo al esquema JSON pedido:\n\n{_IMPORT_SCHEMA}\n\n"
+        f"CUESTIONARIO:\n{text[:12000]}"  # límite de contexto
+    )
+    try:
+        raw = llm.complete_text(_IMPORT_SYSTEM, user_prompt)
+        data = _extract_json(raw)
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(status_code=500, detail=f"Error al parsear con LLM: {e}") from e
+    try:
+        return SurveyImportDraft(**data)
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(status_code=422, detail=f"Respuesta del LLM no válida: {e}") from e
 
 
 @router.get("/{sid}/export")

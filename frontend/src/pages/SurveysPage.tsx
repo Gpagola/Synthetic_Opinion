@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { api, Persona, QuestionIn, Survey, SurveyResults } from "../api/client";
+import { api, ConditionRule, Persona, QuestionIn, Survey, SurveyImportDraft, SurveyResults } from "../api/client";
 import { useCountry } from "../CountryContext";
 import { getCountry, Band } from "../countries";
 
@@ -14,7 +14,7 @@ const Q_TYPES = [
 const NEEDS_OPTIONS = new Set(["single", "multiple"]);
 
 // Pregunta en edición: guarda el texto crudo de opciones para no reformatear al teclear.
-type EditQ = QuestionIn & { opcText?: string };
+type EditQ = QuestionIn & { opcText?: string; condiciones: ConditionRule[] };
 const splitOpts = (s: string) => s.split(",").map((x) => x.trim()).filter(Boolean);
 
 const BREAKS = [
@@ -146,6 +146,7 @@ function SurveyDetail({ id, onBack }: { id: number; onBack: () => void }) {
   const [breakVar, setBreakVar] = useState("");
   const [results, setResults] = useState<SurveyResults | null>(null);
   const [saving, setSaving] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const pollRef = useRef<number | null>(null);
   const breakVarRef = useRef("");
   useEffect(() => { breakVarRef.current = breakVar; }, [breakVar]);
@@ -153,7 +154,7 @@ function SurveyDetail({ id, onBack }: { id: number; onBack: () => void }) {
   useEffect(() => {
     api.getSurvey(id).then((s) => {
       setSurvey(s); setEstado(s.estado);
-      setQuestions(s.questions.map((q) => ({ texto: q.texto, tipo: q.tipo, opciones: q.opciones, obligatoria: q.obligatoria, opcText: q.opciones.join(", ") })));
+      setQuestions(s.questions.map((q) => ({ texto: q.texto, tipo: q.tipo, opciones: q.opciones, obligatoria: q.obligatoria, opcText: q.opciones.join(", "), condiciones: q.condiciones ?? [] })));
       setModelo(s.modelo || "gpt-4o");
       // Solo personas del país de la encuesta (la muestra se toma de ahí).
       api.listPersonas(undefined, s.pais).then(setPersonas);
@@ -187,6 +188,7 @@ function SurveyDetail({ id, onBack }: { id: number; onBack: () => void }) {
         tipo: q.tipo,
         obligatoria: q.obligatoria,
         opciones: NEEDS_OPTIONS.has(q.tipo) ? splitOpts(q.opcText ?? q.opciones.join(", ")) : [],
+        condiciones: q.condiciones ?? [],
       }));
       setSurvey(await api.setSurveyQuestions(id, payload));
     } finally { setSaving(false); }
@@ -214,7 +216,7 @@ function SurveyDetail({ id, onBack }: { id: number; onBack: () => void }) {
     } catch (e) { alert("Error: " + (e as Error).message); setEstado("draft"); }
   };
 
-  const addQ = () => setQuestions([...questions, { texto: "", tipo: "single", opciones: [], obligatoria: true, opcText: "" }]);
+  const addQ = () => setQuestions([...questions, { texto: "", tipo: "single", opciones: [], obligatoria: true, opcText: "", condiciones: [] }]);
   const updQ = (i: number, patch: Partial<EditQ>) => setQuestions(questions.map((q, j) => j === i ? { ...q, ...patch } : q));
   const rmQ = (i: number) => setQuestions(questions.filter((_, j) => j !== i));
 
@@ -222,6 +224,22 @@ function SurveyDetail({ id, onBack }: { id: number; onBack: () => void }) {
 
   return (
     <div className="w80">
+      {importOpen && (
+        <ImportModal
+          idioma={survey.idioma}
+          pais={survey.pais}
+          onClose={() => setImportOpen(false)}
+          onImport={(draft) => {
+            setQuestions(draft.preguntas.map((q, i) => ({
+              texto: q.texto, tipo: q.tipo, opciones: q.opciones ?? [],
+              obligatoria: q.obligatoria ?? true,
+              opcText: (q.opciones ?? []).join(", "),
+              condiciones: (q.condiciones ?? []) as ConditionRule[],
+            })));
+            setImportOpen(false);
+          }}
+        />
+      )}
       <div className="toolbar" style={{ position: "relative", alignItems: "center" }}>
         <button className="secondary" onClick={onBack}
           style={{ position: "absolute", left: "-7.5rem", top: "50%", transform: "translateY(-50%)" }}>← Volver</button>
@@ -234,30 +252,67 @@ function SurveyDetail({ id, onBack }: { id: number; onBack: () => void }) {
         {/* Constructor + muestra */}
         <div style={{ flex: "1 1 360px", maxWidth: 460 }}>
           <div className="card">
-            <div className="flex-between"><h3>Cuestionario</h3><button className="secondary" onClick={addQ}>+ Pregunta</button></div>
-            {questions.map((q, i) => (
-              <div key={i} style={{ borderBottom: "1px solid var(--border)", paddingBottom: 8, marginBottom: 8 }}>
-                <textarea rows={2} placeholder="Texto de la pregunta" value={q.texto}
-                  onChange={(e) => updQ(i, { texto: e.target.value })} />
-                <div className="row" style={{ marginTop: 6 }}>
-                  <select value={q.tipo} onChange={(e) => updQ(i, { tipo: e.target.value })}>
-                    {Q_TYPES.map((t) => <option key={t.v} value={t.v}>{t.label}</option>)}
-                  </select>
-                  <button className="danger" style={{ flex: "0 0 auto" }} onClick={() => rmQ(i)}>✕</button>
-                </div>
-                {NEEDS_OPTIONS.has(q.tipo) && (
-                  <input style={{ marginTop: 6 }} placeholder="Opciones separadas por coma (p. ej. Real Madrid, Barça, Atlético)"
-                    value={q.opcText ?? q.opciones.join(", ")}
-                    onChange={(e) => updQ(i, { opcText: e.target.value })} />
-                )}
-                {q.tipo === "abierta" && (
-                  <p className="muted" style={{ margin: "6px 0 0", fontSize: "0.8rem" }}>
-                    Respuesta de texto libre; cada persona contesta con sus palabras.
-                  </p>
-                )}
+            <div className="flex-between">
+              <h3>Cuestionario</h3>
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <button className="secondary" onClick={() => setImportOpen(true)}>↑ Importar PDF/Word</button>
+                <button className="secondary" onClick={addQ}>+ Pregunta</button>
               </div>
-            ))}
-            {questions.length === 0 && <p className="muted">Añade la primera pregunta.</p>}
+            </div>
+            {questions.map((q, i) => {
+              const opts = NEEDS_OPTIONS.has(q.tipo) ? splitOpts(q.opcText ?? q.opciones.join(", ")) : (q.tipo === "yesno" ? ["Sí", "No"] : []);
+              const hasConds = NEEDS_OPTIONS.has(q.tipo) || q.tipo === "yesno";
+              return (
+                <div key={i} style={{ borderBottom: "1px solid var(--border)", paddingBottom: 10, marginBottom: 10 }}>
+                  <div style={{ fontWeight: 600, fontSize: "0.78rem", color: "var(--accent-blue)", marginBottom: 4 }}>P{i + 1}</div>
+                  <textarea rows={2} placeholder="Texto de la pregunta" value={q.texto}
+                    onChange={(e) => updQ(i, { texto: e.target.value })} />
+                  <div className="row" style={{ marginTop: 6 }}>
+                    <select value={q.tipo} onChange={(e) => updQ(i, { tipo: e.target.value, condiciones: [] })}>
+                      {Q_TYPES.map((t) => <option key={t.v} value={t.v}>{t.label}</option>)}
+                    </select>
+                    <button className="danger" style={{ flex: "0 0 auto" }} onClick={() => rmQ(i)}>✕</button>
+                  </div>
+                  {NEEDS_OPTIONS.has(q.tipo) && (
+                    <input style={{ marginTop: 6 }} placeholder="Opciones separadas por coma"
+                      value={q.opcText ?? q.opciones.join(", ")}
+                      onChange={(e) => updQ(i, { opcText: e.target.value })} />
+                  )}
+                  {q.tipo === "abierta" && (
+                    <p className="muted" style={{ margin: "6px 0 0", fontSize: "0.8rem" }}>
+                      Respuesta de texto libre; cada persona contesta con sus palabras.
+                    </p>
+                  )}
+                  {/* Branching / skip logic */}
+                  {hasConds && (
+                    <div style={{ marginTop: 8, paddingLeft: 8, borderLeft: "2px solid var(--border)" }}>
+                      {(q.condiciones ?? []).map((rule, ri) => (
+                        <div key={ri} className="row" style={{ gap: "0.4rem", marginBottom: 4, alignItems: "center" }}>
+                          <span className="muted" style={{ fontSize: "0.78rem", whiteSpace: "nowrap" }}>Si responde</span>
+                          <select style={{ flex: 1 }} value={rule.si_respuesta}
+                            onChange={(e) => { const c = [...(q.condiciones ?? [])]; c[ri] = { ...c[ri], si_respuesta: e.target.value }; updQ(i, { condiciones: c }); }}>
+                            {opts.map((o) => <option key={o} value={o}>{o}</option>)}
+                          </select>
+                          <span className="muted" style={{ fontSize: "0.78rem", whiteSpace: "nowrap" }}>→ saltar a</span>
+                          <select style={{ flex: 1 }} value={rule.ir_a_orden ?? "fin"}
+                            onChange={(e) => { const c = [...(q.condiciones ?? [])]; c[ri] = { ...c[ri], ir_a_orden: e.target.value === "fin" ? null : +e.target.value }; updQ(i, { condiciones: c }); }}>
+                            <option value="fin">Fin de encuesta</option>
+                            {questions.map((_, j) => j > i ? <option key={j} value={j}>P{j + 1}</option> : null)}
+                          </select>
+                          <button className="danger" style={{ flex: "0 0 auto", padding: "0 0.4rem" }}
+                            onClick={() => { const c = (q.condiciones ?? []).filter((_, k) => k !== ri); updQ(i, { condiciones: c }); }}>✕</button>
+                        </div>
+                      ))}
+                      <button className="secondary" style={{ fontSize: "0.78rem", marginTop: 2 }}
+                        onClick={() => updQ(i, { condiciones: [...(q.condiciones ?? []), { si_respuesta: opts[0] ?? "Sí", ir_a_orden: null }] })}>
+                        + Salto condicional
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            {questions.length === 0 && <p className="muted">Añade la primera pregunta o importa desde un PDF/Word.</p>}
             <button onClick={saveQuestions} disabled={saving}>{saving ? "Guardando…" : "Guardar cuestionario"}</button>
           </div>
 
@@ -318,9 +373,11 @@ function SurveyDetail({ id, onBack }: { id: number; onBack: () => void }) {
               </select>
             </div>
             {!results && <p className="muted">Lanza la encuesta para ver los resultados.</p>}
-            {results?.preguntas.map((q) => (
+            {results?.preguntas.map((q, ri) => (
               <div key={q.question_id} style={{ marginBottom: "1.25rem" }}>
-                <p style={{ margin: "0 0 6px", fontWeight: 500 }}>{q.texto}
+                <p style={{ margin: "0 0 6px", fontWeight: 500 }}>
+                  <span style={{ color: "var(--accent-blue)", fontSize: "0.78rem", fontWeight: 600, marginRight: 6 }}>P{ri + 1}</span>
+                  {q.texto} <span className="muted" style={{ fontSize: "0.8rem" }}>({q.n} resp.)</span>
                   {q.media != null && <span className="muted"> · media {q.media}</span>}
                   {q.nps != null && <span className="muted"> · NPS {q.nps}</span>}
                 </p>
@@ -360,6 +417,78 @@ function SurveyDetail({ id, onBack }: { id: number; onBack: () => void }) {
             ))}
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function ImportModal({
+  idioma, pais, onClose, onImport,
+}: {
+  idioma: string; pais: string;
+  onClose: () => void;
+  onImport: (draft: SurveyImportDraft) => void;
+}) {
+  const [file, setFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [draft, setDraft] = useState<SurveyImportDraft | null>(null);
+  const [err, setErr] = useState("");
+
+  const analyze = async () => {
+    if (!file) return;
+    setLoading(true); setErr("");
+    try {
+      const d = await api.parseFileSurvey(file, idioma, pais);
+      setDraft(d);
+    } catch (e) { setErr((e as Error).message); }
+    finally { setLoading(false); }
+  };
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal" style={{ maxWidth: 560 }} onClick={(e) => e.stopPropagation()}>
+        <h2 style={{ marginTop: 0 }}>Importar cuestionario</h2>
+        {!draft ? (
+          <>
+            <p className="muted">Sube un PDF o Word con tu cuestionario. La IA lo convertirá a nuestro formato para que lo revises antes de guardar.</p>
+            <div style={{ border: "2px dashed var(--border)", borderRadius: 8, padding: "1.5rem", textAlign: "center", marginBottom: "1rem" }}>
+              <input type="file" accept=".pdf,.docx,.doc" style={{ display: "block", margin: "0 auto" }}
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+              {file && <p className="muted" style={{ marginTop: 8 }}>{file.name}</p>}
+            </div>
+            {err && <p style={{ color: "var(--danger)" }}>{err}</p>}
+            <div className="flex-between">
+              <button className="secondary" onClick={onClose}>Cancelar</button>
+              <button onClick={analyze} disabled={!file || loading}>
+                {loading ? "Analizando…" : "Analizar con IA"}
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="muted">Revisa y ajusta el cuestionario extraído antes de cargarlo.</p>
+            <div style={{ background: "var(--bg-2)", borderRadius: 6, padding: "0.75rem", marginBottom: "1rem" }}>
+              <strong>{draft.nombre}</strong>{draft.tema && <span className="muted"> — {draft.tema}</span>}
+            </div>
+            <div style={{ maxHeight: "40vh", overflowY: "auto" }}>
+              {draft.preguntas.map((q, i) => (
+                <div key={i} style={{ marginBottom: 8, paddingBottom: 8, borderBottom: "1px solid var(--border)" }}>
+                  <span style={{ color: "var(--accent-blue)", fontSize: "0.78rem", fontWeight: 600, marginRight: 6 }}>P{i + 1}</span>
+                  <span style={{ fontWeight: 500 }}>{q.texto}</span>
+                  <span className="tag" style={{ marginLeft: 6 }}>{q.tipo}</span>
+                  {(q.opciones ?? []).length > 0 && <span className="muted" style={{ fontSize: "0.8rem", marginLeft: 6 }}>{q.opciones!.join(" · ")}</span>}
+                  {(q.condiciones ?? []).length > 0 && <div className="muted" style={{ fontSize: "0.78rem", marginTop: 2 }}>
+                    {q.condiciones!.map((c, ci) => <span key={ci}> → Si "{c.si_respuesta}" → {c.ir_a_orden != null ? `P${c.ir_a_orden + 1}` : "Fin"}</span>)}
+                  </div>}
+                </div>
+              ))}
+            </div>
+            <div className="flex-between" style={{ marginTop: "1rem" }}>
+              <button className="secondary" onClick={() => setDraft(null)}>← Volver a subir</button>
+              <button onClick={() => onImport(draft)}>Cargar cuestionario</button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

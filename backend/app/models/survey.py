@@ -43,6 +43,9 @@ class SurveyQuestion(Base):
     opciones: Mapped[list] = mapped_column(JSON, default=list)
     orden: Mapped[int] = mapped_column(Integer, default=0)
     obligatoria: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Reglas de salto (skip logic). Cada regla: {"si_respuesta": "Sí", "ir_a_orden": 4}
+    # ir_a_orden=null → terminar encuesta para esa persona. Solo aplica en single/yesno/multiple.
+    condiciones: Mapped[list] = mapped_column(JSON, default=list)
 
     survey: Mapped["Survey"] = relationship(back_populates="questions")
 

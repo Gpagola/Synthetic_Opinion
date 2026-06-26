@@ -3,11 +3,19 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 
 
+class ConditionRule(BaseModel):
+    """Regla de salto: si la respuesta coincide con si_respuesta, ir a ir_a_orden.
+    ir_a_orden=None significa terminar la encuesta para esa persona."""
+    si_respuesta: str
+    ir_a_orden: int | None = None
+
+
 class QuestionIn(BaseModel):
     texto: str
-    tipo: str  # single | multiple | yesno | likert | nps
+    tipo: str  # single | multiple | yesno | likert | nps | abierta
     opciones: list[str] = Field(default_factory=list)
     obligatoria: bool = True
+    condiciones: list[ConditionRule] = Field(default_factory=list)
 
 
 class QuestionsUpdate(BaseModel):
@@ -21,6 +29,7 @@ class QuestionOut(BaseModel):
     opciones: list[str] = Field(default_factory=list)
     orden: int
     obligatoria: bool
+    condiciones: list[ConditionRule] = Field(default_factory=list)
 
     model_config = {"from_attributes": True}
 
@@ -92,3 +101,10 @@ class ResultsOut(BaseModel):
     total_respuestas: int
     break_var: str | None = None
     preguntas: list[QuestionResult] = Field(default_factory=list)
+
+
+class SurveyImportDraft(BaseModel):
+    """Resultado del importador PDF/Word: cuestionario parseado, sin guardar en BD."""
+    nombre: str
+    tema: str = ""
+    preguntas: list[QuestionIn]

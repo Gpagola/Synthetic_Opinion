@@ -773,11 +773,18 @@ details.card[open] summary::before { content: "▾ "; }
   z-index: 50;
 }
 .orb-canvas {
-  width: min(46vw, 440px);
-  height: min(46vw, 440px);
-  display: block;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(98vw, 96vh, 1300px);
+  height: min(98vw, 96vh, 1300px);
+  pointer-events: none;
+  z-index: 0;
 }
 .landing-title {
+  position: relative;
+  z-index: 1;
   font-family: "Alliance No.2", system-ui, sans-serif;
   font-weight: 300;
   font-size: clamp(3.5rem, 13vw, 12rem);
@@ -785,8 +792,11 @@ details.card[open] summary::before { content: "▾ "; }
   letter-spacing: -0.02em;
   margin: 0;
   color: #fff;
+  text-shadow: 0 2px 40px rgba(0, 0, 0, 0.6);
 }
 .landing-cards {
+  position: relative;
+  z-index: 1;
   display: flex;
   gap: clamp(1rem, 2.5vw, 2rem);
   flex-wrap: wrap;

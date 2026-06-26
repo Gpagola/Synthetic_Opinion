@@ -22,9 +22,9 @@ function Orb() {
     resize();
     window.addEventListener("resize", resize);
 
-    const LAT = 26, LON = 46;
+    const LAT = 30, LON = 54;
     // Halo de partículas alrededor de la esfera (direcciones aleatorias).
-    const halo = Array.from({ length: 280 }, () => {
+    const halo = Array.from({ length: 460 }, () => {
       const u = Math.random() * 2 - 1, t = Math.random() * Math.PI * 2;
       const s = Math.sqrt(1 - u * u), r = 1.02 + Math.random() * 0.95;
       return { x: s * Math.cos(t) * r, y: u * r, z: s * Math.sin(t) * r,
@@ -35,7 +35,7 @@ function Orb() {
     const draw = (now: number) => {
       const time = (now - start) / 1000;
       ctx.clearRect(0, 0, w, h);
-      const cx = w / 2, cy = h / 2, R = Math.min(w, h) * 0.33;
+      const cx = w / 2, cy = h / 2, R = Math.min(w, h) * 0.40;
       const ay = time * 0.18, ax = Math.sin(time * 0.13) * 0.22 + 0.16;
       const cY = Math.cos(ay), sY = Math.sin(ay), cX = Math.cos(ax), sX = Math.sin(ax);
 

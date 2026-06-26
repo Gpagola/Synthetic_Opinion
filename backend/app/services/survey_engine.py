@@ -209,7 +209,8 @@ def answer_survey(survey_id: int, persona_ids: list[int], modelo: str,
         # atributos dispararían lazy-loads concurrentes sobre la misma conexión MySQL
         # ("Packet sequence number wrong"). Los hilos solo reciben datos planos.
         items = [(p.id, p.nombre, _perfil(p), _snapshot(p)) for p in ordered]
-        llm = get_llm()
+        # Si el modelo es Claude, usar el proveedor Anthropic; si no, OpenAI.
+        llm = get_llm("anthropic" if modelo.startswith("claude") else "openai")
 
         by_orden = {q.orden: q for q in questions}
 

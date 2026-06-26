@@ -378,6 +378,9 @@ function SurveyDetail({ id, onBack }: { id: number; onBack: () => void }) {
                 <select value={modelo} onChange={(e) => setModelo(e.target.value)}>
                   <option value="gpt-4o">GPT-4o (rápido)</option>
                   <option value="gpt-5.5">GPT-5.5 (razonamiento)</option>
+                  <option disabled>──────────</option>
+                  <option value="claude-sonnet-4-6">Claude Sonnet 4.6 (equivalente a GPT-4o)</option>
+                  <option value="claude-opus-4-8">Claude Opus 4.8 (mayor calidad)</option>
                 </select></div>
             </div>
             <p className="muted" style={{ margin: "6px 0" }}>Responderán ~{previewN} personas.</p>

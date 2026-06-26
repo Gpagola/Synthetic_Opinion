@@ -220,6 +220,23 @@ function SurveyDetail({ id, onBack }: { id: number; onBack: () => void }) {
   const updQ = (i: number, patch: Partial<EditQ>) => setQuestions(questions.map((q, j) => j === i ? { ...q, ...patch } : q));
   const rmQ = (i: number) => setQuestions(questions.filter((_, j) => j !== i));
 
+  // Drag-and-drop nativo para reordenar preguntas.
+  const dragIdx = useRef<number | null>(null);
+  const onDragStart = (i: number) => { dragIdx.current = i; };
+  const onDragOver = (e: React.DragEvent, i: number) => {
+    e.preventDefault();
+    const from = dragIdx.current;
+    if (from === null || from === i) return;
+    setQuestions((qs) => {
+      const next = [...qs];
+      const [moved] = next.splice(from, 1);
+      next.splice(i, 0, moved);
+      dragIdx.current = i;
+      return next;
+    });
+  };
+  const onDragEnd = () => { dragIdx.current = null; };
+
   if (!survey) return <div className="loading-center"><span className="spinner blink">Cargando…</span></div>;
 
   return (
@@ -263,7 +280,17 @@ function SurveyDetail({ id, onBack }: { id: number; onBack: () => void }) {
               const opts = NEEDS_OPTIONS.has(q.tipo) ? splitOpts(q.opcText ?? q.opciones.join(", ")) : (q.tipo === "yesno" ? ["Sí", "No"] : []);
               const hasConds = NEEDS_OPTIONS.has(q.tipo) || q.tipo === "yesno";
               return (
-                <div key={i} style={{ borderBottom: "1px solid var(--border)", paddingBottom: 10, marginBottom: 10 }}>
+                <div key={i}
+                  draggable
+                  onDragStart={() => onDragStart(i)}
+                  onDragOver={(e) => onDragOver(e, i)}
+                  onDragEnd={onDragEnd}
+                  style={{ borderBottom: "1px solid var(--border)", paddingBottom: 10, marginBottom: 10,
+                           cursor: "grab", display: "flex", gap: "0.5rem", alignItems: "flex-start" }}>
+                  {/* Handle de arrastre */}
+                  <span style={{ fontSize: "1.1rem", color: "var(--muted)", marginTop: 2, cursor: "grab",
+                                 userSelect: "none", flexShrink: 0 }} title="Arrastra para reordenar">⠿</span>
+                  <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 600, fontSize: "0.78rem", color: "var(--accent-blue)", marginBottom: 4 }}>P{i + 1}</div>
                   <textarea rows={2} placeholder="Texto de la pregunta" value={q.texto}
                     onChange={(e) => updQ(i, { texto: e.target.value })} />
@@ -309,6 +336,7 @@ function SurveyDetail({ id, onBack }: { id: number; onBack: () => void }) {
                       </button>
                     </div>
                   )}
+                  </div>{/* fin flex:1 */}
                 </div>
               );
             })}

@@ -214,6 +214,11 @@ def answer_survey(survey_id: int, persona_ids: list[int], modelo: str,
 
         by_orden = {q.orden: q for q in questions}
 
+        # Para modelos Claude usamos effort="low": las encuestas no necesitan
+        # razonamiento profundo y "high" (el default) hace que cada llamada tarde
+        # decenas de segundos con 20+ preguntas.
+        claude_effort = "low" if modelo.startswith("claude") else None
+
         def ask(item):
             pid, nombre, perfil, _snap = item
             system = (
@@ -222,7 +227,8 @@ def answer_survey(survey_id: int, persona_ids: list[int], modelo: str,
                 f"{contexto_pais}\n\nTu perfil:\n{perfil}"
             )
             try:
-                data = llm.complete_json(system, prompt, model=modelo, reasoning_effort=reasoning_effort)
+                data = llm.complete_json(system, prompt, model=modelo,
+                                         reasoning_effort=claude_effort or reasoning_effort)
                 return pid, data.get("respuestas", {})
             except Exception:  # noqa: BLE001
                 return pid, None

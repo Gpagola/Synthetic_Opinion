@@ -777,8 +777,8 @@ details.card[open] summary::before { content: "▾ "; }
   top: 50%;
   left: 68%;                 /* desplazado a la derecha (entre el título y el borde) */
   transform: translate(-50%, -50%);
-  width: min(98vh, 70vw);
-  height: min(98vh, 70vw);
+  width: min(127vh, 91vw);
+  height: min(127vh, 91vw);
   pointer-events: none;
   z-index: 0;
 }
@@ -810,7 +810,7 @@ details.card[open] summary::before { content: "▾ "; }
 .landing-tagline {
   font-family: Georgia, "Times New Roman", "Personae Sans", serif;
   font-style: italic;
-  font-size: clamp(0.95rem, 1.8vw, 1.5rem);
+  font-size: clamp(1.3rem, 2.6vw, 2.1rem);
   color: rgba(255, 255, 255, 0.8);
   margin: 0 0 clamp(0.4rem, 1vh, 0.9rem);
   text-shadow: 0 1px 24px rgba(0, 0, 0, 0.6);
@@ -846,12 +846,12 @@ details.card[open] summary::before { content: "▾ "; }
   background: #C5FF02;
   color: #0a0a0a;
   border: none;
-  border-radius: 16px;
+  border-radius: 5px;
   font-family: "Alliance No.2", system-ui, sans-serif;
   font-weight: 500;
-  font-size: clamp(1.1rem, 1.6vw, 1.5rem);
+  font-size: clamp(0.7rem, 1vw, 0.9rem);
   letter-spacing: 0.1em;
-  padding: 1.05rem 3.4rem;
+  padding: 0.62rem 2rem;
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }

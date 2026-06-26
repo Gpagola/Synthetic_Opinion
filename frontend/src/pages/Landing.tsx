@@ -31,24 +31,51 @@ function Orb() {
                a: 0.15 + Math.random() * 0.5 };
     });
 
+    // Ratón: posición normalizada [-1,1] (target + suavizado) y "energía" por velocidad.
+    const m = { tx: 0, ty: 0, x: 0, y: 0, energy: 0 };
+    const onMove = (e: MouseEvent) => {
+      const nx = (e.clientX / window.innerWidth) * 2 - 1;
+      const ny = (e.clientY / window.innerHeight) * 2 - 1;
+      m.energy = Math.min(1, m.energy + Math.hypot(nx - m.tx, ny - m.ty) * 1.6);
+      m.tx = nx; m.ty = ny;
+    };
+    window.addEventListener("mousemove", onMove);
+
     const start = performance.now();
     const draw = (now: number) => {
       const time = (now - start) / 1000;
       ctx.clearRect(0, 0, w, h);
-      const cx = w / 2, cy = h / 2, R = Math.min(w, h) * 0.40;
-      const ay = time * 0.18, ax = Math.sin(time * 0.13) * 0.22 + 0.16;
+      const cx = w / 2, cy = h / 2, R = Math.min(w, h) * 0.46;
+
+      // Suavizado del ratón y decaimiento de la energía.
+      m.x += (m.tx - m.x) * 0.06; m.y += (m.ty - m.y) * 0.06; m.energy *= 0.93;
+
+      // La rotación SIGUE al cursor (además del giro continuo).
+      const ay = time * 0.16 + m.x * 0.9;
+      const ax = 0.14 + m.y * 0.7 + Math.sin(time * 0.13) * 0.12;
       const cY = Math.cos(ay), sY = Math.sin(ay), cX = Math.cos(ax), sX = Math.sin(ax);
+
+      // Dirección del cursor en espacio de vista (hacia la cámara) → bulto.
+      const md = Math.hypot(m.x, -m.y, 0.85);
+      const mdx = m.x / md, mdy = -m.y / md, mdz = 0.85 / md;
+      const bulge = 0.28 + m.energy * 0.25;          // intensidad del bulto
+      const morph = 1 + m.energy * 1.4;              // ondulación según velocidad
 
       const project = (x: number, y: number, z: number) => {
         const x1 = x * cY + z * sY, z1 = -x * sY + z * cY;
         const y2 = y * cX - z1 * sX, z2 = y * sX + z1 * cX;
+        // Bulto hacia el cursor: empuja hacia fuera la cara que mira al puntero.
+        const n = Math.hypot(x1, y2, z2) || 1;
+        const d = Math.max(0, (x1 * mdx + y2 * mdy + z2 * mdz) / n);
+        const k = 1 + bulge * d * d;
         const p = 1 / (1.9 - z2 * 0.42);
-        return { sx: cx + x1 * R * p, sy: cy + y2 * R * p, z: z2 };
+        return { sx: cx + x1 * R * p * k, sy: cy + y2 * R * p * k, z: z2 };
       };
-      // Deformación suave (aspecto "blobby" que respira).
+      // Deformación suave ("blobby" que respira), amplificada por el movimiento del ratón.
       const rad = (th: number, ph: number) =>
-        1 + 0.10 * Math.sin(3 * th + time * 0.6) + 0.08 * Math.cos(2 * ph - time * 0.5)
-          + 0.05 * Math.sin(4 * ph + 2 * th);
+        1 + morph * (0.10 * Math.sin(3 * th + time * 0.6)
+                   + 0.08 * Math.cos(2 * ph - time * 0.5)
+                   + 0.05 * Math.sin(4 * ph + 2 * th));
 
       const grid: { sx: number; sy: number; z: number }[][] = [];
       for (let i = 0; i <= LAT; i++) {
@@ -90,7 +117,11 @@ function Orb() {
       raf = requestAnimationFrame(draw);
     };
     raf = requestAnimationFrame(draw);
-    return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", resize); };
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", resize);
+      window.removeEventListener("mousemove", onMove);
+    };
   }, []);
   return <canvas ref={ref} className="orb-canvas" aria-hidden="true" />;
 }

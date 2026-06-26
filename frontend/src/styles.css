@@ -775,10 +775,10 @@ details.card[open] summary::before { content: "▾ "; }
 .orb-canvas {
   position: absolute;
   top: 50%;
-  left: 50%;
+  left: 68%;                 /* desplazado a la derecha (entre el título y el borde) */
   transform: translate(-50%, -50%);
-  width: min(108vw, 108vh);
-  height: min(108vw, 108vh);
+  width: min(98vh, 70vw);
+  height: min(98vh, 70vw);
   pointer-events: none;
   z-index: 0;
 }
@@ -829,9 +829,10 @@ details.card[open] summary::before { content: "▾ "; }
   text-shadow: 0 1px 24px rgba(0, 0, 0, 0.6);
 }
 .landing-credit-logo {
-  height: clamp(22px, 2.6vw, 40px);
+  height: clamp(46px, 7vw, 104px);
   width: auto;
-  opacity: 0.92;
+  opacity: 1;
+  display: block;
 }
 .landing-cards {
   position: relative;

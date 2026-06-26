@@ -403,7 +403,21 @@ function SurveyDetail({ id, onBack }: { id: number; onBack: () => void }) {
                 {BREAKS.map((b) => <option key={b.v} value={b.v}>Cruce: {b.label}</option>)}
               </select>
             </div>
-            {!results && <p className="muted">Lanza la encuesta para ver los resultados.</p>}
+            {estado === "running" ? (
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "1.5rem 0" }}>
+                <span className="spinner blink" style={{ fontSize: "1.05rem", fontWeight: 500 }}>
+                  Ejecutando
+                  {progress ? ` · ${progress.done} / ${progress.total} respuestas` : "…"}
+                </span>
+                {progress && progress.total > 0 && (
+                  <span className="muted" style={{ fontSize: "0.85rem" }}>
+                    ({Math.round((progress.done / progress.total) * 100)}%)
+                  </span>
+                )}
+              </div>
+            ) : !results ? (
+              <p className="muted">Lanza la encuesta para ver los resultados.</p>
+            ) : null}
             {results?.preguntas.map((q, ri) => (
               <div key={q.question_id} style={{ marginBottom: "1.25rem" }}>
                 <p style={{ margin: "0 0 6px", fontWeight: 500 }}>

@@ -12,8 +12,9 @@ db = SessionLocal()
 s = db.get(Survey, sid)
 if not s:
     sys.exit(f"Encuesta {sid} no encontrada.")
+nombre = s.nombre  # capturar antes del commit
 s.estado = "draft"
 s.error_msg = None
 db.commit()
 db.close()
-print(f"Encuesta {sid} ('{s.nombre}') reseteada a draft.")
+print(f"Encuesta {sid} ('{nombre}') reseteada a draft.")

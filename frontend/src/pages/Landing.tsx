@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCountry } from "../CountryContext";
 import { CountryCode } from "../countries";
@@ -95,6 +95,20 @@ function Orb() {
   return <canvas ref={ref} className="orb-canvas" aria-hidden="true" />;
 }
 
+/** Logo Andersen (imagen pública en frontend/public/andersen-consulting.png);
+ *  si el archivo no existe, cae a texto blanco para no mostrar imagen rota. */
+function AndersenCredit() {
+  const [ok, setOk] = useState(true);
+  const src = `${import.meta.env.BASE_URL}andersen-consulting.png`;
+  return (
+    <div className="landing-credit">
+      <img src={src} alt="Andersen Consulting" className="landing-credit-logo"
+           onError={() => setOk(false)} style={{ display: ok ? "block" : "none" }} />
+      {!ok && <span>Andersen Consulting</span>}
+    </div>
+  );
+}
+
 export default function Landing() {
   const { setPais } = useCountry();
   const nav = useNavigate();
@@ -102,7 +116,7 @@ export default function Landing() {
   return (
     <div className="landing">
       <Orb />
-      <div className="landing-credit">Andersen Consulting</div>
+      <AndersenCredit />
       <div className="landing-content">
         <h1 className="landing-title">Personæ</h1>
         <p className="landing-tagline">the masks through which a synthetic population speaks</p>

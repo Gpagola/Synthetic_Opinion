@@ -474,7 +474,7 @@ function DesignTab({ survey, setSurvey, questions, setQuestions, saving, onSave 
           hasExisting={questions.length > 0} />
       )}
       {editIntro && (
-        <IntroModal survey={survey} onClose={() => setEditIntro(false)}
+        <IntroModal survey={survey} questions={questions} onClose={() => setEditIntro(false)}
           onSave={async (desc) => {
             try {
               const r = await fetch(`${import.meta.env.VITE_API_BASE ?? "/api"}/surveys/${survey.id}`,
@@ -746,20 +746,68 @@ function RunTab({ survey, estado, progress, results, breakVar, setBreakVar,
 
 // ─── Modal bienvenida/intro ───────────────────────────────────────────────────
 
-function IntroModal({ survey, onClose, onSave }: {
-  survey: Survey; onClose: () => void; onSave: (desc: string) => Promise<void>;
+function IntroModal({ survey, questions, onClose, onSave }: {
+  survey: Survey; questions: EditQ[];
+  onClose: () => void; onSave: (desc: string) => Promise<void>;
 }) {
   const [desc, setDesc] = useState(survey.descripcion ?? "");
   const [saving, setSaving] = useState(false);
+  const [generating, setGenerating] = useState(false);
+
+  const generateWithAI = async () => {
+    setGenerating(true);
+    try {
+      const qSummary = questions.slice(0, 12).map((q, i) =>
+        `P${i + 1}: ${q.texto || "(sin texto)"} [${q.tipo}]`).join("\n");
+      const system = "Eres experto en investigación de mercados. Redactas textos de bienvenida para encuestas: breves, claros, sin preguntas, sin instrucciones de navegación.";
+      const prompt = `Escribe un texto de bienvenida para esta encuesta.\n\nEncuesta: "${survey.nombre}"\nTema: ${survey.tema || "(sin tema)"}\n\nPreguntas (resumen):\n${qSummary}\n\nEl texto debe: presentar brevemente el objetivo, indicar que es anónima y el tiempo aproximado. Máximo 3 frases. Sin saludos redundantes. En español. Solo el texto, sin comillas ni markdown.`;
+      const resp = await fetch(`${import.meta.env.VITE_API_BASE ?? "/api"}/surveys/generate-intro`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ system, prompt }),
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        setDesc(data.texto ?? "");
+      } else {
+        alert("No se pudo generar el texto. Inténtalo de nuevo.");
+      }
+    } catch { alert("Error al contactar con la IA."); }
+    finally { setGenerating(false); }
+  };
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" style={{ maxWidth: 500 }} onClick={(e) => e.stopPropagation()}>
+      <div className="modal" style={{ maxWidth: 520 }} onClick={(e) => e.stopPropagation()}>
         <h2 style={{ marginTop: 0 }}>Texto de bienvenida</h2>
         <p className="muted" style={{ marginTop: 0 }}>
-          Se mostrará al entrevistado antes de comenzar. Explica el objetivo de la encuesta, la duración estimada y cualquier contexto necesario. Sin preguntas ni instrucciones de salto.
+          Se mostrará al entrevistado antes de comenzar. Explica el objetivo, la duración estimada y que es anónima. Sin preguntas ni instrucciones de salto.
         </p>
-        <textarea rows={6} value={desc} onChange={(e) => setDesc(e.target.value)}
-          placeholder="Ej: Buenos días. Esta encuesta estudia las actitudes sobre la jubilación en España. Tardará unos 5 minutos. Sus respuestas son anónimas." />
+        <div style={{ position: "relative" }}>
+          <textarea rows={6} value={desc} onChange={(e) => setDesc(e.target.value)}
+            style={{ paddingRight: "2.8rem" }}
+            placeholder="Ej: Buenos días. Esta encuesta estudia las actitudes sobre la jubilación en España. Tardará unos 5 minutos. Sus respuestas son anónimas." />
+          {/* Botón IA superpuesto arriba a la derecha del textarea */}
+          <button
+            onClick={generateWithAI}
+            disabled={generating || questions.length === 0}
+            title={questions.length === 0 ? "Añade preguntas primero" : "Generar con IA"}
+            style={{
+              position: "absolute", top: 8, right: 8,
+              background: "var(--accent-blue)", color: "#fff",
+              border: "none", borderRadius: 6, padding: "4px 8px",
+              fontSize: "0.75rem", cursor: "pointer", lineHeight: 1.4,
+              display: "flex", alignItems: "center", gap: 4,
+              opacity: generating || questions.length === 0 ? 0.55 : 1,
+            }}>
+            {generating ? "…" : "✦ IA"}
+          </button>
+        </div>
+        {generating && (
+          <p className="muted" style={{ fontSize: "0.82rem", marginTop: 6 }}>
+            Generando introducción basada en tus preguntas…
+          </p>
+        )}
         <div className="flex-between" style={{ marginTop: "1rem" }}>
           <button className="secondary" onClick={onClose}>Cancelar</button>
           <button disabled={saving} onClick={async () => { setSaving(true); await onSave(desc); setSaving(false); }}>

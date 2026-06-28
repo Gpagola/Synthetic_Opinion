@@ -172,6 +172,18 @@ def _extract_text(file_bytes: bytes, filename: str) -> str:
     return file_bytes.decode("utf-8", errors="replace")
 
 
+@router.post("/generate-intro")
+async def generate_intro(payload: dict, db: Session = Depends(get_db)):
+    """Genera un texto de bienvenida con Claude a partir de un system+prompt del frontend."""
+    llm = get_llm("anthropic")
+    system = payload.get("system", "Eres experto en investigación de mercados.")
+    prompt = payload.get("prompt", "")
+    if not prompt:
+        raise HTTPException(status_code=400, detail="Falta el prompt.")
+    texto = llm.complete_text(system, prompt, reasoning_effort="low")
+    return {"texto": texto.strip()}
+
+
 @router.post("/parse-file", response_model=SurveyImportDraft)
 async def parse_file(
     file: UploadFile = File(...),

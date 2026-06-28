@@ -147,6 +147,23 @@ function SurveyDetail({ id, onBack }: { id: number; onBack: () => void }) {
   const [results, setResults] = useState<SurveyResults | null>(null);
   const [saving, setSaving] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  // Columnas redimensionables: leftPct = % de ancho de la columna izquierda.
+  const [leftPct, setLeftPct] = useState(38);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const draggingRef = useRef(false);
+  const startDivider = (e: React.MouseEvent) => {
+    e.preventDefault();
+    draggingRef.current = true;
+    const onMove = (ev: MouseEvent) => {
+      if (!draggingRef.current || !containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const pct = Math.min(70, Math.max(20, ((ev.clientX - rect.left) / rect.width) * 100));
+      setLeftPct(pct);
+    };
+    const onUp = () => { draggingRef.current = false; window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
   const pollRef = useRef<number | null>(null);
   const breakVarRef = useRef("");
   useEffect(() => { breakVarRef.current = breakVar; }, [breakVar]);
@@ -194,6 +211,13 @@ function SurveyDetail({ id, onBack }: { id: number; onBack: () => void }) {
     } finally { setSaving(false); }
   };
   const loadResults = (bv: string) => api.surveyResults(id, bv).then(setResults).catch(() => {});
+
+  const cancel = async () => {
+    if (!window.confirm("¿Cancelar la encuesta en curso? Quedará en estado borrador.")) return;
+    try { await api.cancelSurvey(id); } catch { /* ignorar si falla */ }
+    if (pollRef.current) { window.clearInterval(pollRef.current); pollRef.current = null; }
+    setEstado("draft"); setProgress(null); setResults(null);
+  };
 
   const launch = async () => {
     await saveQuestions();
@@ -265,9 +289,9 @@ function SurveyDetail({ id, onBack }: { id: number; onBack: () => void }) {
         <a href={api.surveyExportUrl(id)}><button className="secondary" disabled={estado !== "completed"}>Excel</button></a>
       </div>
 
-      <div style={{ display: "flex", gap: "1rem", alignItems: "flex-start", flexWrap: "wrap" }}>
-        {/* Constructor + muestra */}
-        <div style={{ flex: "1 1 360px", maxWidth: 460 }}>
+      <div ref={containerRef} style={{ display: "flex", alignItems: "flex-start", userSelect: draggingRef.current ? "none" : undefined }}>
+        {/* Columna izquierda: constructor + muestra */}
+        <div style={{ width: `${leftPct}%`, minWidth: 220, flexShrink: 0 }}>
           <div className="card">
             <div className="flex-between">
               <h3>Cuestionario</h3>
@@ -384,9 +408,14 @@ function SurveyDetail({ id, onBack }: { id: number; onBack: () => void }) {
                 </select></div>
             </div>
             <p className="muted" style={{ margin: "6px 0" }}>Responderán ~{previewN} personas.</p>
-            <button onClick={launch} disabled={estado === "running" || questions.length === 0}>
-              {estado === "running" ? "Ejecutando…" : "Lanzar encuesta"}
-            </button>
+            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+              <button onClick={launch} disabled={estado === "running" || questions.length === 0}>
+                {estado === "running" ? "Ejecutando…" : "Lanzar encuesta"}
+              </button>
+              {estado === "running" && (
+                <button className="danger" onClick={cancel}>Cancelar</button>
+              )}
+            </div>
             {estado === "running" && progress && (
               <p className="spinner" style={{ marginTop: 6 }}>{progress.done}/{progress.total} respondidas…</p>
             )}
@@ -394,8 +423,19 @@ function SurveyDetail({ id, onBack }: { id: number; onBack: () => void }) {
           </div>
         </div>
 
-        {/* Resultados */}
-        <div style={{ flex: "2 1 520px" }}>
+        {/* Divisor arrastrable */}
+        <div onMouseDown={startDivider}
+          style={{ width: 6, flexShrink: 0, cursor: "col-resize", alignSelf: "stretch",
+                   background: "transparent", position: "relative", zIndex: 10 }}>
+          <div style={{ position: "absolute", top: 0, bottom: 0, left: 2, width: 2,
+                        background: "var(--border)", borderRadius: 2,
+                        transition: "background 0.15s" }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--accent-blue)")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "var(--border)")} />
+        </div>
+
+        {/* Columna derecha: resultados */}
+        <div style={{ flex: 1, minWidth: 220, overflow: "hidden" }}>
           <div className="card">
             <div className="flex-between">
               <h3>Resultados {results ? `(${results.total_respuestas})` : ""}</h3>

@@ -68,6 +68,19 @@ def set_questions(sid: int, payload: QuestionsUpdate, db: Session = Depends(get_
     return s
 
 
+@router.post("/{sid}/cancel", status_code=200)
+def cancel_survey(sid: int, db: Session = Depends(get_db)):
+    """Cancela una encuesta en ejecución: la devuelve a draft y borra respuestas parciales."""
+    s = _get(db, sid)
+    if s.estado != "running":
+        raise HTTPException(status_code=409, detail="La encuesta no está en ejecución.")
+    s.estado = "draft"
+    s.error_msg = None
+    db.query(SurveyResponse).filter(SurveyResponse.survey_id == sid).delete()
+    db.commit()
+    return {"ok": True}
+
+
 @router.post("/{sid}/launch", response_model=StatusOut)
 def launch(sid: int, payload: LaunchRequest, background_tasks: BackgroundTasks,
            db: Session = Depends(get_db)):

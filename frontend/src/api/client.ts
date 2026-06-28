@@ -276,6 +276,8 @@ export const api = {
   surveyResults: (id: number, breakVar: string) =>
     req<SurveyResults>(`/surveys/${id}/results${breakVar ? `?break_var=${breakVar}` : ""}`),
   surveyExportUrl: (id: number) => `${BASE}/surveys/${id}/export`,
+  cancelSurvey: (id: number) =>
+    req<void>(`/surveys/${id}/cancel`, { method: "POST" }),
   parseFileSurvey: async (file: File, idioma: string, pais: string): Promise<SurveyImportDraft> => {
     const form = new FormData();
     form.append("file", file);

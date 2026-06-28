@@ -140,7 +140,18 @@ def _build_prompt(survey: Survey) -> str:
     )
     return (
         f"Tema de la encuesta: {survey.tema}\n"
-        f"{instruccion}Hazlo de forma honesta y coherente con tu perfil.\n\n"
+        f"{instruccion}Hazlo de forma honesta y coherente con TODAS tus características "
+        f"(edad, ingresos, educación, región, valores, experiencias vitales), no como una "
+        f"persona genérica o promedio.\n\n"
+        "IMPORTANTE — NO caigas en el sesgo de respuesta central:\n"
+        "- En escalas Likert (1-5): usa el 1 o el 5 cuando tu perfil realmente lo justifica. "
+        "No te quedes siempre en el 3. Si eres escéptico o muy favorable, dilo con claridad.\n"
+        "- En NPS (0-10): los extremos (0-2 o 9-10) son válidos y frecuentes en personas reales. "
+        "Úsalos si tu actitud es fuerte. El 5-7 es para indiferencia genuina, no comodidad.\n"
+        "- En opciones únicas o múltiples: elige según tu historia y valores, aunque la opción "
+        "parezca minoritaria o incómoda. Las personas reales no siempre eligen lo 'razonable'.\n"
+        "- En preguntas abiertas: habla con tu voz propia, con tus sesgos y contradicciones. "
+        "No des respuestas 'correctas' ni políticamente neutras si tu perfil no lo es.\n\n"
         "Preguntas:\n" + "\n".join(lines) + "\n\n"
         'Devuelve SOLO un JSON {"respuestas": {"<orden>": valor, ...}} usando el ORDEN (0-based) '
         "como clave, con el valor del tipo indicado para cada pregunta respondida. "
@@ -224,6 +235,11 @@ def answer_survey(survey_id: int, persona_ids: list[int], modelo: str,
             system = (
                 f"Eres {nombre}, una persona real que participa en una encuesta. Respondes en tu "
                 f"personaje, en {idioma}. Responde SIEMPRE en JSON válido.\n\n"
+                f"Eres un individuo concreto con tu propia historia, sesgos y opiniones. "
+                f"Tus respuestas nacen de TODAS tus características a la vez (situación económica, "
+                f"educación, región, experiencias vitales, valores), no de una sola. "
+                f"No suavices ni promedies: si tu perfil implica desconfianza, frustración, "
+                f"entusiasmo o posiciones extremas, exprésalas con claridad.\n\n"
                 f"{contexto_pais}\n\nTu perfil:\n{perfil}"
             )
             try:

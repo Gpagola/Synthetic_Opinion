@@ -862,3 +862,72 @@ details.card[open] summary::before { content: "▾ "; }
 .country-card:active { transform: translateY(-1px); }
 
 a.brand { text-decoration: none; color: inherit; }
+
+/* ====================== Survey tabs ========================= */
+.survey-tabs {
+  display: flex; gap: 0; margin-bottom: 1.25rem;
+  border-bottom: 2px solid var(--border);
+}
+.survey-tab {
+  background: none; border: none; border-bottom: 2px solid transparent;
+  margin-bottom: -2px; padding: 0.55rem 1.4rem;
+  font-size: 0.95rem; font-family: var(--font-label); letter-spacing: 0.04em;
+  color: var(--text-dim); cursor: pointer; transition: color 0.15s, border-color 0.15s;
+}
+.survey-tab:hover { color: var(--text); }
+.survey-tab.active { color: var(--text); border-bottom-color: var(--accent-blue); font-weight: 500; }
+
+/* ====================== Question Graph ====================== */
+.graph-node {
+  box-sizing: border-box;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-card);
+  display: flex; flex-direction: column;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  overflow: hidden;
+}
+.graph-node:hover {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(47,107,255,0.12);
+}
+.graph-node-head {
+  display: flex; align-items: center; gap: 5px;
+  padding: 5px 8px 4px;
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.72rem; line-height: 1;
+}
+.graph-pnum {
+  font-weight: 700; color: var(--accent-blue); font-family: var(--font-label);
+}
+.graph-type {
+  color: var(--text-dim); font-family: var(--font-label);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.graph-node-body {
+  flex: 1; padding: 6px 8px;
+  font-size: 0.8rem; line-height: 1.35;
+  overflow: hidden;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+}
+/* Nodo de bienvenida */
+.graph-node-welcome {
+  border-color: var(--accent-blue) !important;
+  background: linear-gradient(135deg, var(--bg-card), var(--bg-2));
+}
+.graph-node-welcome .graph-node-head { background: rgba(47,107,255,0.10); }
+
+/* Botón insertar entre nodos */
+.graph-insert-btn {
+  width: 20px; height: 20px; border-radius: 50%; padding: 0;
+  font-size: 1rem; line-height: 18px; text-align: center;
+  background: var(--bg-2); border: 1.5px solid var(--border);
+  color: var(--text-dim); cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+  z-index: 5;
+}
+.graph-insert-btn:hover {
+  background: var(--accent-blue); border-color: var(--accent-blue); color: #fff;
+}

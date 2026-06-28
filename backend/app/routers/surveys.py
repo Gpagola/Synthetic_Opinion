@@ -68,6 +68,18 @@ def set_questions(sid: int, payload: QuestionsUpdate, db: Session = Depends(get_
     return s
 
 
+@router.patch("/{sid}", response_model=SurveyOut)
+def patch_survey(sid: int, payload: dict, db: Session = Depends(get_db)):
+    """Actualiza campos de metadatos de la encuesta (descripcion, nombre, tema)."""
+    from fastapi import Body
+    s = _get(db, sid)
+    for field in ("nombre", "tema", "descripcion", "idioma"):
+        if field in payload:
+            setattr(s, field, payload[field])
+    db.commit(); db.refresh(s)
+    return s
+
+
 @router.post("/{sid}/cancel", status_code=200)
 def cancel_survey(sid: int, db: Session = Depends(get_db)):
     """Cancela una encuesta en ejecución: la devuelve a draft y borra respuestas parciales."""

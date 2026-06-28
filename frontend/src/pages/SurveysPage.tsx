@@ -410,7 +410,13 @@ function DesignTab({ survey, setSurvey, questions, setQuestions, saving, onSave 
 
 // ─── Grafo de preguntas ────────────────────────────────────────────────────────
 
-const NW = 164, NH = 86, GAP = 56, ROW_Y = 100, ARC_H = 42;
+// Grafo: constantes de layout
+const NW = 158, NH = 82, GAP = 48, INTRO_W = 144;
+// Arcos de skip: 3 niveles escalonados con altura fija (no crece con la distancia)
+const N_LEVELS = 3, LEVEL_STEP = 18, ARC_BASE = 28;
+const ARC_SPACE = ARC_BASE + (N_LEVELS - 1) * LEVEL_STEP + 16; // espacio total sobre nodos
+const ROW_Y = ARC_SPACE + 16;
+const trunc = (s: string, n = 16) => s.length > n ? s.slice(0, n) + "…" : s;
 
 function QuestionGraph({ questions, onClickNode, onClickInsert, intro, onEditIntro }: {
   questions: EditQ[];
@@ -420,146 +426,139 @@ function QuestionGraph({ questions, onClickNode, onClickInsert, intro, onEditInt
   onEditIntro: () => void;
 }) {
   const n = questions.length;
-  const INTRO_W = 148;
-  const OFFSET = INTRO_W + GAP * 2; // espacio para el nodo de bienvenida
-  const totalW = OFFSET + n * (NW + GAP) + GAP + 48;
-  const svgH = ROW_Y + NH + ARC_H + 24;
+  const OFFSET = GAP + INTRO_W + GAP; // left = GAP, entonces P1 empieza en OFFSET
+  const totalW = OFFSET + n * (NW + GAP) + 32;
+  const svgH = ROW_Y + NH + 40;
 
-  // Posición X del centro de cada nodo de pregunta
-  const cx = (i: number) => OFFSET + GAP + i * (NW + GAP) + NW / 2;
+  // Centro X de nodo i
+  const cx = (i: number) => OFFSET + i * (NW + GAP) + NW / 2;
 
-  // Construir flechas
   type Arrow = { from: number; to: number | null; label: string; isSkip: boolean };
   const arrows: Arrow[] = [];
   for (let i = 0; i < n; i++) {
     const q = questions[i];
-    // Flecha normal al siguiente (si no hay condición que cubra TODAS las opciones → siguiente siempre)
     const hasFinCond = (q.condiciones ?? []).some((c) => c.ir_a_orden === null);
     if (!hasFinCond && i < n - 1)
       arrows.push({ from: i, to: i + 1, label: "", isSkip: false });
-    // Flechas de condición
     for (const cond of (q.condiciones ?? [])) {
-      const label = `Si "${cond.si_respuesta}"`;
-      if (cond.ir_a_orden === null) {
+      const label = trunc(`Si "${cond.si_respuesta}"`);
+      if (cond.ir_a_orden === null)
         arrows.push({ from: i, to: null, label, isSkip: true });
-      } else {
-        const target = cond.ir_a_orden; // ir_a_orden = orden del destino = índice
-        if (target !== i + 1)
-          arrows.push({ from: i, to: target, label, isSkip: true });
-      }
+      else if (cond.ir_a_orden !== i + 1)
+        arrows.push({ from: i, to: cond.ir_a_orden, label, isSkip: true });
     }
   }
+  // Asignar nivel (escalonado) a los arcos de skip
+  let skipIdx = 0;
+  const arcLevel = arrows.map((a) => a.isSkip && a.to !== null ? (skipIdx++) % N_LEVELS : -1);
 
   const nodeY = ROW_Y;
 
   return (
-    <div style={{ position: "relative", minWidth: totalW, height: svgH + 32 }}>
-      {/* SVG para flechas */}
-      <svg width={totalW} height={svgH} style={{ position: "absolute", top: 0, left: 0, pointerEvents: "none", overflow: "visible" }}>
+    <div style={{ position: "relative", minWidth: totalW, height: svgH + 8 }}>
+      {/* SVG unificado */}
+      <svg width={totalW} height={svgH}
+        style={{ position: "absolute", top: 0, left: 0, pointerEvents: "none", overflow: "visible" }}>
         <defs>
-          <marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
-            <path d="M0,0 L0,6 L8,3 z" fill="var(--muted)" />
+          <marker id="ga" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L7,3 z" fill="var(--border-strong)" />
           </marker>
-          <marker id="arrs" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
-            <path d="M0,0 L0,6 L8,3 z" fill="var(--accent-blue)" />
+          <marker id="gas" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L7,3 z" fill="var(--accent-blue)" />
           </marker>
         </defs>
+
+        {/* Bienvenida → P1 */}
+        {n > 0 && <line
+          x1={GAP + INTRO_W} y1={nodeY + NH / 2}
+          x2={OFFSET} y2={nodeY + NH / 2}
+          stroke="var(--border-strong)" strokeWidth={1.4} markerEnd="url(#ga)" />}
+
         {arrows.map((a, ai) => {
           const x1 = cx(a.from) + NW / 2;
-          const y1 = nodeY + NH / 2;
-          if (a.to === null) {
-            // Flecha hacia abajo (fin)
-            return (
-              <g key={ai}>
-                <line x1={x1} y1={nodeY + NH} x2={x1} y2={nodeY + NH + 30}
-                  stroke="var(--accent-blue)" strokeWidth={1.5} strokeDasharray="4 3"
-                  markerEnd="url(#arrs)" />
-                <text x={x1 + 4} y={nodeY + NH + 24} fontSize={9} fill="var(--accent-blue)" opacity={0.85}>{a.label} → FIN</text>
-              </g>
-            );
-          }
+          const mid_y = nodeY + NH / 2;
+
+          // FIN: flecha hacia abajo
+          if (a.to === null) return (
+            <g key={ai}>
+              <line x1={x1} y1={nodeY + NH} x2={x1} y2={nodeY + NH + 26}
+                stroke="var(--accent-blue)" strokeWidth={1.3} strokeDasharray="4 3"
+                markerEnd="url(#gas)" />
+              <text x={x1 + 4} y={nodeY + NH + 21} fontSize={8}
+                fill="var(--accent-blue)" opacity={0.8}>{a.label} → FIN</text>
+            </g>
+          );
+
           const x2 = cx(a.to) - NW / 2;
-          const y2 = nodeY + NH / 2;
-          if (!a.isSkip) {
-            // Flecha horizontal simple
-            return (
-              <line key={ai} x1={x1} y1={y1} x2={x2} y2={y2}
-                stroke="var(--muted)" strokeWidth={1.5} markerEnd="url(#arr)" />
-            );
-          }
-          // Arco Bézier sobre los nodos
+
+          // Normal: línea horizontal
+          if (!a.isSkip) return (
+            <line key={ai} x1={x1} y1={mid_y} x2={x2} y2={mid_y}
+              stroke="var(--border-strong)" strokeWidth={1.4} markerEnd="url(#ga)" />
+          );
+
+          // Skip: arco con nivel escalonado y altura FIJA (no crece con distancia)
+          const lv = arcLevel[ai]; // 0, 1 o 2
+          const arcY = nodeY - ARC_BASE - lv * LEVEL_STEP;
           const mx = (x1 + x2) / 2;
-          const my = nodeY - ARC_H - Math.abs(a.to - a.from) * 8;
           return (
             <g key={ai}>
-              <path d={`M${x1},${nodeY} C${x1},${my} ${x2},${my} ${x2},${nodeY}`}
-                stroke="var(--accent-blue)" strokeWidth={1.5} strokeDasharray="5 3"
-                fill="none" markerEnd="url(#arrs)" />
-              <text x={mx} y={my - 4} textAnchor="middle" fontSize={9} fill="var(--accent-blue)" opacity={0.9}>{a.label}</text>
+              <path d={`M${x1},${nodeY} C${x1},${arcY} ${x2},${arcY} ${x2},${nodeY}`}
+                stroke="var(--accent-blue)" strokeWidth={1.3}
+                strokeDasharray="5 3" fill="none" opacity={0.82}
+                markerEnd="url(#gas)" />
+              <text x={mx} y={arcY - 3} textAnchor="middle" fontSize={8}
+                fill="var(--accent-blue)" opacity={0.85}>{a.label}</text>
             </g>
           );
         })}
       </svg>
 
-      {/* Nodo de bienvenida */}
+      {/* Nodo bienvenida */}
       <div onClick={onEditIntro} className="graph-node graph-node-welcome"
-        style={{ left: GAP, top: ROW_Y, width: INTRO_W, height: NH, position: "absolute" }}
-        title="Clic para editar la introducción">
+        style={{ left: GAP, top: nodeY, width: INTRO_W, height: NH, position: "absolute" }}>
         <div className="graph-node-head">
           <span className="graph-pnum" style={{ color: "var(--accent-blue)" }}>✦</span>
           <span className="graph-type">Bienvenida</span>
         </div>
-        <div className="graph-node-body" style={{ fontStyle: intro ? "normal" : "italic", color: intro ? undefined : "var(--muted)" }}>
+        <div className="graph-node-body"
+          style={{ fontStyle: intro ? "normal" : "italic", opacity: intro ? 1 : 0.5 }}>
           {intro || "Añadir introducción…"}
         </div>
       </div>
-      {/* Flecha de bienvenida → P1 */}
-      {n > 0 && (
-        <svg width={totalW} height={svgH}
-          style={{ position: "absolute", top: 0, left: 0, pointerEvents: "none", overflow: "visible" }}>
-          <defs>
-            <marker id="arr0" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
-              <path d="M0,0 L0,6 L8,3 z" fill="var(--muted)" />
-            </marker>
-          </defs>
-          <line x1={GAP + INTRO_W} y1={ROW_Y + NH / 2}
-                x2={OFFSET + GAP} y2={ROW_Y + NH / 2}
-                stroke="var(--muted)" strokeWidth={1.5} markerEnd="url(#arr0)" />
-        </svg>
-      )}
 
       {/* Nodos de pregunta */}
       {questions.map((q, i) => {
-        const x = GAP + i * (NW + GAP);
+        const x = OFFSET + i * (NW + GAP);
         const typeLbl = Q_TYPES.find((t) => t.v === q.tipo)?.label ?? q.tipo;
         return (
-          <div key={i} onClick={() => onClickNode(i)}
-            className="graph-node"
-            style={{ left: x, top: nodeY, width: NW, height: NH, position: "absolute" }}
-            title="Clic para editar">
+          <div key={i} onClick={() => onClickNode(i)} className="graph-node"
+            style={{ left: x, top: nodeY, width: NW, height: NH, position: "absolute" }}>
             <div className="graph-node-head">
               <span className="graph-pnum">P{i + 1}</span>
               <span className="graph-type">{typeLbl}</span>
-              {(q.condiciones ?? []).length > 0 && <span title="Tiene saltos condicionales" style={{ marginLeft: "auto" }}>⤵</span>}
+              {(q.condiciones ?? []).length > 0 &&
+                <span style={{ marginLeft: "auto", fontSize: "0.8rem" }}>⤵</span>}
             </div>
             <div className="graph-node-body">
-              {q.texto || <span className="muted" style={{ fontStyle: "italic" }}>Sin texto</span>}
+              {q.texto || <span style={{ fontStyle: "italic", opacity: 0.45 }}>Sin texto</span>}
             </div>
           </div>
         );
       })}
 
-      {/* Botones "+" entre nodos y al final */}
-      {questions.map((_, i) => (
+      {/* "+" entre nodos (en los huecos) */}
+      {questions.map((_, i) => i < n - 1 && (
         <button key={`ins-${i}`} className="graph-insert-btn"
-          style={{ left: GAP + i * (NW + GAP) - 14, top: nodeY + NH / 2 - 10, position: "absolute" }}
-          onClick={(e) => { e.stopPropagation(); onClickInsert(i - 1); }}
-          title={`Insertar antes de P${i + 1}`}>+</button>
+          style={{ position: "absolute",
+                   left: OFFSET + (i + 1) * (NW + GAP) - GAP / 2 - 10,
+                   top: nodeY + NH / 2 - 10 }}
+          onClick={(e) => { e.stopPropagation(); onClickInsert(i); }}>+</button>
       ))}
+      {/* "+" al final */}
       <button className="graph-insert-btn"
-        style={{ left: GAP + n * (NW + GAP), top: nodeY + NH / 2 - 10, position: "absolute" }}
-        onClick={() => onClickInsert(n - 1)}
-        title="Añadir pregunta al final">+</button>
+        style={{ position: "absolute", left: OFFSET + n * (NW + GAP), top: nodeY + NH / 2 - 10 }}
+        onClick={() => onClickInsert(n - 1)}>+</button>
     </div>
   );
 }

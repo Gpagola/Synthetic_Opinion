@@ -585,3 +585,158 @@ def export_survey_docx(survey: Survey) -> bytes:
     buf = io.BytesIO()
     doc.save(buf)
     return buf.getvalue()
+
+
+def export_survey_pptx(db: Session, survey: Survey) -> bytes:
+    """Genera un PPTX de resultados con identidad corporativa Andersen Consulting.
+    Layout: slide portada (dark navy) + una slide por pregunta con barras horizontales."""
+    from pptx import Presentation
+    from pptx.util import Pt, Emu
+    from pptx.dml.color import RGBColor
+    from pptx.enum.text import PP_ALIGN
+
+    # Paleta Andersen
+    NAVY    = RGBColor(0x17, 0x2D, 0x42)
+    WHITE   = RGBColor(0xFF, 0xFF, 0xFF)
+    BLUE_A  = RGBColor(0x15, 0x81, 0xCE)  # acento
+    BLUE_M  = RGBColor(0x21, 0x69, 0x93)  # medio
+    GREY_L  = RGBColor(0xE8, 0xE8, 0xE8)
+    MUTED_D = RGBColor(0x9A, 0xB0, 0xC6)  # texto secundario dark
+    MUTED_L = RGBColor(0x77, 0x77, 0x77)  # texto secundario light
+    FONT    = "Arial"
+
+    # Dimensiones 16:9 Andersen (EMU)
+    W, H = 12192000, 6858000
+    prs = Presentation()
+    prs.slide_width  = Emu(W)
+    prs.slide_height = Emu(H)
+    blank = prs.slide_layouts[6]  # blank
+
+    def rect(slide, x, y, w, h, fill=None, line=False):
+        s = slide.shapes.add_shape(1, Emu(x), Emu(y), Emu(w), Emu(h))
+        if fill:
+            s.fill.solid(); s.fill.fore_color.rgb = fill
+        else:
+            s.fill.background()
+        if not line:
+            s.line.fill.background()
+        else:
+            s.line.color.rgb = fill or WHITE
+        return s
+
+    def text(slide, txt, x, y, w, h, size=14, bold=False, italic=False,
+             color=WHITE, align=PP_ALIGN.LEFT, wrap=True):
+        tb = slide.shapes.add_textbox(Emu(x), Emu(y), Emu(w), Emu(h))
+        tf = tb.text_frame; tf.word_wrap = wrap
+        p = tf.paragraphs[0]; p.alignment = align
+        r = p.add_run(); r.text = txt
+        r.font.name = FONT; r.font.size = Pt(size)
+        r.font.bold = bold; r.font.italic = italic
+        r.font.color.rgb = color
+        return tb
+
+    def footer(slide, dark=True):
+        c = MUTED_D if dark else MUTED_L
+        text(slide, "ANDERSENCONSULTING", 350000, H - 340000, 4000000, 280000,
+             size=8, color=c)
+
+    def left_bar(slide, dark=True):
+        rect(slide, 0, 0, 380000, H,
+             fill=BLUE_M if dark else GREY_L)
+        text(slide, "RESULTS", 50000, H // 2 - 300000, 280000, 600000,
+             size=8, bold=True, color=BLUE_A if dark else BLUE_M, align=PP_ALIGN.CENTER)
+
+    total_resp = db.query(SurveyResponse).filter(SurveyResponse.survey_id == survey.id).count()
+
+    # ── PORTADA (dark) ─────────────────────────────────────────────
+    sl = prs.slides.add_slide(blank)
+    rect(sl, 0, 0, W, H, fill=NAVY)
+    rect(sl, 0, H - 28000, W, 28000, fill=BLUE_A)   # línea inferior acento
+    text(sl, survey.nombre.upper(), 800000, H // 2 - 1000000, W - 1200000, 900000,
+         size=34, bold=True, color=WHITE)
+    if survey.tema:
+        text(sl, survey.tema, 800000, H // 2 - 50000, W - 1200000, 500000,
+             size=18, color=BLUE_A)
+    text(sl, f"n = {total_resp} respuestas", 800000, H // 2 + 600000, 4000000, 320000,
+         size=13, color=MUTED_D)
+    footer(sl, dark=True)
+
+    # ── SLIDES POR PREGUNTA ────────────────────────────────────────
+    results = compute_results(db, survey, None)
+
+    for qi, qr in enumerate(results["preguntas"]):
+        dark = (qi // 3) % 2 == 0  # alterna dark/light cada 3 preguntas
+        bg   = NAVY if dark else WHITE
+        tc   = WHITE if dark else NAVY
+        mut  = MUTED_D if dark else MUTED_L
+        bar_bg = RGBColor(0x22, 0x3A, 0x52) if dark else GREY_L
+
+        sl = prs.slides.add_slide(blank)
+        rect(sl, 0, 0, W, H, fill=bg)
+        left_bar(sl, dark=dark)
+
+        # Número de pregunta + tipo
+        text(sl, f"P{qi + 1}", 480000, 300000, 600000, 380000,
+             size=28, bold=True, color=BLUE_A, align=PP_ALIGN.LEFT)
+        type_lbl = {"single":"Opción única","multiple":"Opción múltiple","yesno":"Sí/No",
+                    "likert":"Likert 1–5","nps":"NPS 0–10","abierta":"Abierta"}.get(qr["tipo"], qr["tipo"])
+        text(sl, type_lbl, 1050000, 350000, 2500000, 280000,
+             size=10, color=BLUE_A if dark else BLUE_M)
+
+        # Texto pregunta
+        text(sl, qr["texto"], 480000, 700000, W - 900000, 750000,
+             size=17, bold=True, color=tc, wrap=True)
+
+        # n=
+        text(sl, f"n = {qr['n']}", 480000, 1400000, 2000000, 260000,
+             size=11, color=mut)
+
+        # Media / NPS
+        y_info = 1400000
+        if qr.get("media") is not None:
+            text(sl, f"Media: {qr['media']}", W - 2600000, y_info, 2200000, 260000,
+                 size=12, bold=True, color=BLUE_A, align=PP_ALIGN.RIGHT)
+        if qr.get("nps") is not None:
+            text(sl, f"NPS: {qr['nps']}", W - 2600000, y_info, 2200000, 260000,
+                 size=12, bold=True, color=BLUE_A, align=PP_ALIGN.RIGHT)
+
+        if qr["tipo"] == "abierta":
+            y = 1800000
+            for tv in (qr.get("textos") or [])[:5]:
+                card_h = 540000
+                rect(sl, 480000, y, W - 960000, card_h,
+                     fill=RGBColor(0x1E, 0x35, 0x4D) if dark else RGBColor(0xF0, 0xF4, 0xF8))
+                snippet = f"“{tv[:130]}…”" if len(tv) > 130 else f"“{tv}”"
+                text(sl, snippet, 620000, y + 100000, W - 1200000, card_h - 200000,
+                     size=12, italic=True, color=tc, wrap=True)
+                y += card_h + 80000
+        else:
+            distribs = qr.get("distribucion", [])
+            max_n = max((d["n"] for d in distribs), default=1) or 1
+            BAR_X  = 2950000   # inicio de barra
+            BAR_AW = 7800000   # ancho área de barras
+            BAR_H  = 330000
+            GAP    = 140000
+            y = 1800000
+            for d in distribs:
+                lbl = d["opcion"]
+                if len(lbl) > 26: lbl = lbl[:25] + "…"
+                text(sl, lbl, 480000, y + 30000, 2400000, BAR_H,
+                     size=11, color=tc)
+                # fondo
+                rect(sl, BAR_X, y + 30000, BAR_AW, BAR_H - 60000, fill=bar_bg)
+                # barra rellena
+                bw = int(BAR_AW * d["n"] / max_n) if d["n"] > 0 else 0
+                if bw > 0:
+                    rect(sl, BAR_X, y + 30000, bw, BAR_H - 60000, fill=BLUE_A)
+                # valor
+                text(sl, f"{d['n']} · {d['pct']}%",
+                     BAR_X + BAR_AW + 80000, y + 30000, 1200000, BAR_H,
+                     size=11, color=mut)
+                y += BAR_H + GAP
+
+        footer(sl, dark=dark)
+
+    buf = io.BytesIO()
+    prs.save(buf)
+    return buf.getvalue()

@@ -223,3 +223,16 @@ def export(sid: int, db: Session = Depends(get_db)):
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="encuesta_{sid}.xlsx"'},
     )
+
+
+@router.get("/{sid}/export-docx")
+def export_docx(sid: int, db: Session = Depends(get_db)):
+    """Exporta el cuestionario como .docx con identidad corporativa Andersen."""
+    s = _get(db, sid)
+    content = survey_engine.export_survey_docx(s)
+    nombre = (s.nombre or f"encuesta_{sid}").replace(" ", "_")[:40]
+    return FastAPIResponse(
+        content=content,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f'attachment; filename="{nombre}.docx"'},
+    )

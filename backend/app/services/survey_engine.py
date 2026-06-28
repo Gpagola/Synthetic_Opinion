@@ -419,3 +419,169 @@ def export_xlsx(db: Session, survey: Survey) -> bytes:
     buf = io.BytesIO()
     wb.save(buf)
     return buf.getvalue()
+
+
+def export_survey_docx(survey: Survey) -> bytes:
+    """Genera un .docx del cuestionario con identidad corporativa Andersen Consulting."""
+    from docx import Document
+    from docx.shared import Pt, RGBColor, Cm
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.oxml.ns import qn
+    from docx.oxml import OxmlElement
+
+    NAVY   = RGBColor(0x17, 0x2D, 0x42)   # Heading 1
+    BLUE2  = RGBColor(0x21, 0x69, 0x93)   # Tabla header / acento
+    BLACK  = RGBColor(0x00, 0x00, 0x00)
+    WHITE  = RGBColor(0xFF, 0xFF, 0xFF)
+    FONT   = "Arial"  # fallback de Helvetica Neue
+
+    def add_h1_border(para):
+        """Añade borde inferior a un párrafo (estilo Heading 1 Andersen)."""
+        pPr = para._p.get_or_add_pPr()
+        pBdr = OxmlElement("w:pBdr")
+        bottom = OxmlElement("w:bottom")
+        bottom.set(qn("w:val"), "single")
+        bottom.set(qn("w:sz"), "6")
+        bottom.set(qn("w:space"), "1")
+        bottom.set(qn("w:color"), "172D42")
+        pBdr.append(bottom)
+        pPr.append(pBdr)
+
+    def set_cell_bg(cell, hex_color: str):
+        tc = cell._tc
+        tcPr = tc.get_or_add_tcPr()
+        shd = OxmlElement("w:shd")
+        shd.set(qn("w:val"), "clear")
+        shd.set(qn("w:color"), "auto")
+        shd.set(qn("w:fill"), hex_color)
+        tcPr.append(shd)
+
+    doc = Document()
+
+    # Página A4 con márgenes Andersen
+    sec = doc.sections[0]
+    sec.page_width  = Cm(21)
+    sec.page_height = Cm(29.7)
+    sec.top_margin    = Cm(3.3)
+    sec.right_margin  = Cm(2)
+    sec.bottom_margin = Cm(2.5)
+    sec.left_margin   = Cm(2)
+
+    # Footer corporativo
+    footer_para = sec.footer.paragraphs[0]
+    footer_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run = footer_para.add_run("BRAINTRUST SL es una firma miembro de ANDERSEN CONSULTING")
+    run.font.name = FONT
+    run.font.size = Pt(8)
+    run.font.color.rgb = BLACK
+
+    # ── Título principal ──────────────────────────────────────────
+    title_para = doc.add_paragraph()
+    title_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    run = title_para.add_run(survey.nombre.upper())
+    run.font.name = FONT
+    run.font.size = Pt(22)
+    run.font.bold = True
+    run.font.color.rgb = NAVY
+    add_h1_border(title_para)
+    doc.add_paragraph()  # espacio
+
+    if survey.tema:
+        p = doc.add_paragraph()
+        run = p.add_run(survey.tema)
+        run.font.name = FONT
+        run.font.size = Pt(11)
+        run.font.italic = True
+        run.font.color.rgb = NAVY
+
+    # ── Introducción ──────────────────────────────────────────────
+    if survey.descripcion:
+        doc.add_paragraph()
+        h = doc.add_paragraph()
+        r = h.add_run("INTRODUCCIÓN")
+        r.font.name = FONT; r.font.size = Pt(11)
+        r.font.bold = True; r.font.color.rgb = NAVY
+        add_h1_border(h)
+        p = doc.add_paragraph()
+        p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+        run = p.add_run(survey.descripcion)
+        run.font.name = FONT; run.font.size = Pt(10.5)
+
+    # ── Sección: Cuestionario ─────────────────────────────────────
+    doc.add_paragraph()
+    h = doc.add_paragraph()
+    r = h.add_run("CUESTIONARIO")
+    r.font.name = FONT; r.font.size = Pt(11)
+    r.font.bold = True; r.font.color.rgb = NAVY
+    add_h1_border(h)
+    doc.add_paragraph()
+
+    Q_LABELS = {
+        "single": "Opción única", "multiple": "Opción múltiple",
+        "yesno": "Sí / No", "likert": "Escala 1–5",
+        "nps": "NPS 0–10", "abierta": "Respuesta abierta",
+    }
+
+    for i, q in enumerate(survey.questions):
+        # Número + tipo
+        meta = doc.add_paragraph()
+        r1 = meta.add_run(f"P{i + 1}. ")
+        r1.font.name = FONT; r1.font.size = Pt(10.5)
+        r1.font.bold = True; r1.font.color.rgb = BLUE2
+        r2 = meta.add_run(f"[{Q_LABELS.get(q.tipo, q.tipo)}]")
+        r2.font.name = FONT; r2.font.size = Pt(9)
+        r2.font.color.rgb = BLUE2
+
+        # Texto de la pregunta
+        texto_p = doc.add_paragraph()
+        texto_p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+        run = texto_p.add_run(q.texto or "(Sin texto)")
+        run.font.name = FONT; run.font.size = Pt(10.5); run.font.bold = True
+
+        # Opciones
+        opts = list(q.opciones) if q.opciones else []
+        if q.tipo == "yesno":   opts = ["Sí", "No"]
+        if q.tipo == "likert":  opts = ["1 – Muy en desacuerdo", "2", "3", "4", "5 – Muy de acuerdo"]
+        if q.tipo == "nps":     opts = ["0 ─ 1 ─ 2 ─ 3 ─ 4 ─ 5 ─ 6 ─ 7 ─ 8 ─ 9 ─ 10"]
+        if q.tipo == "abierta":
+            line = doc.add_paragraph()
+            run = line.add_run("_" * 80)
+            run.font.name = FONT; run.font.size = Pt(10.5)
+        for opt in opts:
+            op = doc.add_paragraph(style="List Paragraph")
+            op.paragraph_format.left_indent = Cm(0.7)
+            run = op.add_run(f"○  {opt}")
+            run.font.name = FONT; run.font.size = Pt(10.5)
+
+        # Skip logic
+        for cond in (q.condiciones or []):
+            skip_p = doc.add_paragraph()
+            skip_p.paragraph_format.left_indent = Cm(0.7)
+            dest = f"ir a P{cond['ir_a_orden'] + 1}" if cond.get("ir_a_orden") is not None else "Fin de encuesta"
+            run = skip_p.add_run(f'↳  Si responde "{cond["si_respuesta"]}" → {dest}')
+            run.font.name = FONT; run.font.size = Pt(9)
+            run.font.italic = True; run.font.color.rgb = BLUE2
+
+        doc.add_paragraph()  # espacio entre preguntas
+
+    # ── Consideraciones finales (fijas Andersen) ──────────────────
+    doc.add_page_break()
+    h = doc.add_paragraph()
+    r = h.add_run("CONSIDERACIONES FINALES")
+    r.font.name = FONT; r.font.size = Pt(11)
+    r.font.bold = True; r.font.color.rgb = NAVY
+    add_h1_border(h)
+    doc.add_paragraph()
+    for txt in [
+        "La información contenida en este documento es de carácter confidencial y está destinada exclusivamente a su destinatario.",
+        "Este documento no implica ningún compromiso de adjudicación por parte de BRAINTRUST SL ni de ANDERSEN CONSULTING.",
+        "Los datos, análisis y metodologías aquí descritos son propiedad intelectual de BRAINTRUST SL.",
+    ]:
+        p = doc.add_paragraph()
+        p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+        run = p.add_run(f"• {txt}")
+        run.font.name = FONT; run.font.size = Pt(10.5)
+
+    buf = io.BytesIO()
+    doc.save(buf)
+    return buf.getvalue()

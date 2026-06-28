@@ -300,30 +300,6 @@ function SurveyDetail({ id, onBack }: { id: number; onBack: () => void }) {
 const trunc = (s: string, max = 22) => s.length > max ? s.slice(0, max) + "…" : s;
 
 // Genera Word del cuestionario para imprimir
-function downloadSurveyWord(survey: Survey, questions: EditQ[]) {
-  const lines: string[] = [];
-  lines.push(`ENCUESTA: ${survey.nombre}\n`);
-  if (survey.tema) lines.push(`Tema: ${survey.tema}\n`);
-  if (survey.descripcion) lines.push(`\nINTRODUCCIÓN\n${survey.descripcion}\n`);
-  lines.push(`\n${"─".repeat(60)}\n`);
-  questions.forEach((q, i) => {
-    const typeLbl = Q_TYPES.find(t => t.v === q.tipo)?.label ?? q.tipo;
-    lines.push(`\nP${i + 1}. [${typeLbl}]`);
-    lines.push(q.texto || "(Sin texto)");
-    if (q.opciones?.length) q.opciones.forEach(o => lines.push(`   ○  ${o}`));
-    if (q.tipo === "likert") lines.push("   1=Muy en desacuerdo  2  3  4  5=Muy de acuerdo");
-    if (q.tipo === "nps") lines.push("   0 ─────────────────────────────── 10");
-    if (q.tipo === "abierta") lines.push("   __________________________________________");
-    (q.condiciones ?? []).forEach(c =>
-      lines.push(`   ↳ Si "${c.si_respuesta}" → ${c.ir_a_orden != null ? `ir a P${c.ir_a_orden + 1}` : "Fin"}`));
-  });
-  const content = lines.join("\n");
-  const blob = new Blob([content], { type: "application/msword" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a"); a.href = url;
-  a.download = `${survey.nombre.replace(/[^a-z0-9]/gi, "_")}.doc`;
-  a.click(); URL.revokeObjectURL(url);
-}
 
 function DesignTab({ survey, setSurvey, questions, setQuestions, saving, onSave }: {
   survey: Survey;
@@ -376,7 +352,10 @@ function DesignTab({ survey, setSurvey, questions, setQuestions, saving, onSave 
           if (questions.length > 0 && !confirm("¿Importar? Se reemplazarán las preguntas actuales.")) return;
           setImportOpen(true);
         }}>↑ Importar PDF/Word</button>
-        <button className="secondary" onClick={() => downloadSurveyWord(survey, questions)}>↓ Word</button>
+        <a href={api.surveyExportDocxUrl(survey.id)}
+           download={`${survey.nombre.replace(/[^a-z0-9]/gi, "_")}.docx`}>
+          <button className="secondary">↓ Word (.docx)</button>
+        </a>
         <div style={{ flex: 1 }} />
         <button onClick={() => onSave()} disabled={saving}>
           {saving ? "Guardando…" : "Guardar"}

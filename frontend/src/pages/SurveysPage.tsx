@@ -296,6 +296,35 @@ function SurveyDetail({ id, onBack }: { id: number; onBack: () => void }) {
 
 // ─── Tab Diseño: grafo + importador ──────────────────────────────────────────
 
+// Helpers compartidos
+const trunc = (s: string, max = 22) => s.length > max ? s.slice(0, max) + "…" : s;
+
+// Genera Word del cuestionario para imprimir
+function downloadSurveyWord(survey: Survey, questions: EditQ[]) {
+  const lines: string[] = [];
+  lines.push(`ENCUESTA: ${survey.nombre}\n`);
+  if (survey.tema) lines.push(`Tema: ${survey.tema}\n`);
+  if (survey.descripcion) lines.push(`\nINTRODUCCIÓN\n${survey.descripcion}\n`);
+  lines.push(`\n${"─".repeat(60)}\n`);
+  questions.forEach((q, i) => {
+    const typeLbl = Q_TYPES.find(t => t.v === q.tipo)?.label ?? q.tipo;
+    lines.push(`\nP${i + 1}. [${typeLbl}]`);
+    lines.push(q.texto || "(Sin texto)");
+    if (q.opciones?.length) q.opciones.forEach(o => lines.push(`   ○  ${o}`));
+    if (q.tipo === "likert") lines.push("   1=Muy en desacuerdo  2  3  4  5=Muy de acuerdo");
+    if (q.tipo === "nps") lines.push("   0 ─────────────────────────────── 10");
+    if (q.tipo === "abierta") lines.push("   __________________________________________");
+    (q.condiciones ?? []).forEach(c =>
+      lines.push(`   ↳ Si "${c.si_respuesta}" → ${c.ir_a_orden != null ? `ir a P${c.ir_a_orden + 1}` : "Fin"}`));
+  });
+  const content = lines.join("\n");
+  const blob = new Blob([content], { type: "application/msword" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href = url;
+  a.download = `${survey.nombre.replace(/[^a-z0-9]/gi, "_")}.doc`;
+  a.click(); URL.revokeObjectURL(url);
+}
+
 function DesignTab({ survey, setSurvey, questions, setQuestions, saving, onSave }: {
   survey: Survey;
   setSurvey: (s: Survey) => void;
@@ -311,286 +340,151 @@ function DesignTab({ survey, setSurvey, questions, setQuestions, saving, onSave 
   const dragIdx = useRef<number | null>(null);
 
   const openEdit = (idx: number) => { setInsertAfter(null); setEditIdx(idx); };
+  const openInsert = (after: number | null) => { setInsertAfter(after); setEditIdx(null); };
 
   const onDragStart = (i: number) => { dragIdx.current = i; };
   const onDragOver = (e: React.DragEvent, i: number) => {
     e.preventDefault();
     const from = dragIdx.current;
     if (from === null || from === i) return;
-    setQuestions(((qs: EditQ[]) => {
-      const next = [...qs]; const [m] = next.splice(from, 1); next.splice(i, 0, m);
-      dragIdx.current = i; return next;
-    })(questions));
+    const next = [...questions]; const [m] = next.splice(from, 1); next.splice(i, 0, m);
+    dragIdx.current = i; setQuestions(next);
   };
   const onDragEnd = () => { dragIdx.current = null; };
-  const openInsert = (after: number | null) => { setInsertAfter(after); setEditIdx(null); };
 
   const handleImport = (draft: SurveyImportDraft) => {
-    const qs: EditQ[] = draft.preguntas.map((q) => ({
+    setQuestions(draft.preguntas.map((q) => ({
       texto: q.texto, tipo: q.tipo, opciones: q.opciones ?? [],
       obligatoria: q.obligatoria ?? true,
       opcText: (q.opciones ?? []).join(", "),
       condiciones: (q.condiciones ?? []) as ConditionRule[],
-    }));
-    setQuestions(qs);
+    })));
     setImportOpen(false);
   };
 
+  const AddBtn = ({ after }: { after: number | null }) => (
+    <div className="sq-add-row">
+      <button className="sq-add-btn" onClick={() => openInsert(after)}>+ Añadir pregunta</button>
+    </div>
+  );
+
   return (
-    <div>
-      {/* Barra de acciones del diseño */}
-      <div style={{ display: "flex", gap: "0.6rem", marginBottom: "1rem", alignItems: "center", flexWrap: "wrap" }}>
+    <div style={{ maxWidth: 740, margin: "0 auto" }}>
+      {/* Toolbar */}
+      <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.25rem", flexWrap: "wrap" }}>
         <button className="secondary" onClick={() => {
           if (questions.length > 0 && !confirm("¿Importar? Se reemplazarán las preguntas actuales.")) return;
           setImportOpen(true);
         }}>↑ Importar PDF/Word</button>
-        <button className="secondary" onClick={() => openInsert(questions.length - 1)}>+ Añadir pregunta</button>
+        <button className="secondary" onClick={() => downloadSurveyWord(survey, questions)}>↓ Word</button>
         <div style={{ flex: 1 }} />
         <button onClick={() => onSave()} disabled={saving}>
-          {saving ? "Guardando…" : "Guardar cuestionario"}
+          {saving ? "Guardando…" : "Guardar"}
         </button>
       </div>
 
-      {/* Grafo de flujo */}
-      <div className="card" style={{ padding: "1.25rem 0.75rem", overflowX: "auto" }}>
-        {questions.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "2rem" }}>
-            <p className="muted">Aún no hay preguntas.</p>
-            <button className="secondary" onClick={() => openInsert(null)}>+ Añadir la primera pregunta</button>
-          </div>
-        ) : (
-          <QuestionGraph
-            questions={questions}
-            onClickNode={openEdit}
-            onClickInsert={openInsert}
-            intro={survey.descripcion ?? ""}
-            onEditIntro={() => setEditIntro(true)}
-            onDragStart={onDragStart}
-            onDragOver={onDragOver}
-            onDragEnd={onDragEnd}
-          />
-        )}
+      {/* Tarjeta de bienvenida */}
+      <div className="sq-intro-card" onClick={() => setEditIntro(true)}>
+        <div className="sq-intro-label">✦ Bienvenida / Introducción</div>
+        <div className={survey.descripcion ? "sq-intro-text" : "sq-intro-placeholder"}>
+          {survey.descripcion || "Clic para añadir un texto de bienvenida al entrevistado…"}
+        </div>
       </div>
 
-      {/* Modal de edición / nueva pregunta */}
+      <AddBtn after={null} />
+
+      {/* Lista de tarjetas de preguntas */}
+      {questions.map((q, i) => {
+        const typeLbl = Q_TYPES.find(t => t.v === q.tipo)?.label ?? q.tipo;
+        const opts = q.tipo === "yesno" ? ["Sí", "No"] :
+                     q.tipo === "likert" ? ["1", "2", "3", "4", "5"] :
+                     q.tipo === "nps" ? ["0 → 10"] :
+                     (q.opciones ?? []);
+        const skips = q.condiciones ?? [];
+        return (
+          <div key={i}>
+            <div className="sq-card"
+              draggable
+              onDragStart={() => onDragStart(i)}
+              onDragOver={(e) => onDragOver(e, i)}
+              onDragEnd={onDragEnd}>
+              <div className="sq-card-drag" title="Arrastra para reordenar">⠿</div>
+              <div className="sq-card-main">
+                <div className="sq-card-meta">
+                  <span className="sq-card-num">P{i + 1}</span>
+                  <span className="sq-card-type">{typeLbl}</span>
+                  {skips.length > 0 && <span className="sq-card-logic">⤵ Lógica condicional</span>}
+                  {q.obligatoria && <span className="sq-card-req">*</span>}
+                </div>
+                <div className="sq-card-text">
+                  {q.texto || <span style={{ opacity: 0.4, fontStyle: "italic" }}>Sin texto</span>}
+                </div>
+                {q.tipo === "abierta" ? (
+                  <div className="sq-card-open">Respuesta de texto libre</div>
+                ) : opts.length > 0 ? (
+                  <div className="sq-card-opts">
+                    {opts.slice(0, 5).map((o, oi) => (
+                      <span key={oi} className="sq-card-opt">
+                        {q.tipo === "multiple" ? "☐" : "○"} {o}
+                      </span>
+                    ))}
+                    {opts.length > 5 && <span className="sq-card-opt muted">+{opts.length - 5} más…</span>}
+                  </div>
+                ) : null}
+                {skips.map((c, ci) => (
+                  <div key={ci} className="sq-card-skip">
+                    ↳ Si responde <strong>"{c.si_respuesta}"</strong>
+                    {" → "}{c.ir_a_orden != null ? `ir a P${c.ir_a_orden + 1}` : "Fin de encuesta"}
+                  </div>
+                ))}
+              </div>
+              <div className="sq-card-actions">
+                <button className="secondary" onClick={() => openEdit(i)}>Editar</button>
+                <button className="danger" onClick={() => {
+                  if (!confirm("¿Eliminar esta pregunta?")) return;
+                  const updated = questions.filter((_, j) => j !== i);
+                  setQuestions(updated); onSave(updated);
+                }}>✕</button>
+              </div>
+            </div>
+            <AddBtn after={i} />
+          </div>
+        );
+      })}
+
+      {questions.length === 0 && (
+        <div style={{ textAlign: "center", padding: "3rem 1rem", color: "var(--muted)" }}>
+          <p style={{ marginBottom: "1rem" }}>Aún no hay preguntas. ¡Empieza aquí!</p>
+          <button onClick={() => openInsert(null)}>+ Añadir primera pregunta</button>
+        </div>
+      )}
+
+      {/* Modales */}
       {(editIdx !== null || insertAfter !== null) && (
-        <NodeEditModal
-          questions={questions}
-          editIdx={editIdx}
-          insertAfter={insertAfter}
+        <NodeEditModal questions={questions} editIdx={editIdx} insertAfter={insertAfter}
           onClose={() => { setEditIdx(null); setInsertAfter(null); }}
           onSave={async (updated) => {
-            setQuestions(updated);
-            await onSave(updated);
+            setQuestions(updated); await onSave(updated);
             setEditIdx(null); setInsertAfter(null);
-          }}
-        />
+          }} />
       )}
-
-      {/* Modal importador */}
       {importOpen && (
-        <ImportModal
-          idioma={survey.idioma}
-          pais={survey.pais}
-          onClose={() => setImportOpen(false)}
-          onImport={handleImport}
-          hasExisting={questions.length > 0}
-        />
+        <ImportModal idioma={survey.idioma} pais={survey.pais}
+          onClose={() => setImportOpen(false)} onImport={handleImport}
+          hasExisting={questions.length > 0} />
       )}
-
-      {/* Modal intro/bienvenida */}
       {editIntro && (
-        <IntroModal
-          survey={survey}
-          onClose={() => setEditIntro(false)}
+        <IntroModal survey={survey} onClose={() => setEditIntro(false)}
           onSave={async (desc) => {
-            const updated = await api.createSurvey({ nombre: survey.nombre, tema: survey.tema,
-              descripcion: desc, idioma: survey.idioma, pais: survey.pais }).catch(() => null);
-            // La API no tiene PATCH para descripcion sola, usamos el endpoint de actualización
-            // a través de una llamada directa al backend
             try {
               const r = await fetch(`${import.meta.env.VITE_API_BASE ?? "/api"}/surveys/${survey.id}`,
                 { method: "PATCH", headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ descripcion: desc }) });
               if (r.ok) setSurvey({ ...survey, descripcion: desc });
-            } catch {
-              setSurvey({ ...survey, descripcion: desc });
-            }
+            } catch { setSurvey({ ...survey, descripcion: desc }); }
             setEditIntro(false);
-          }}
-        />
+          }} />
       )}
-    </div>
-  );
-}
-
-// ─── Grafo de preguntas ────────────────────────────────────────────────────────
-
-const trunc = (s: string, max = 18) => s.length > max ? s.slice(0, max) + "…" : s;
-
-// Layout vertical
-const VNW = 480;   // ancho del nodo
-const VNH = 76;    // alto del nodo
-const VGAP = 10;   // espacio entre nodos
-const VINH = 68;   // alto del nodo de bienvenida
-const DRAG_W = 28; // ancho del handle de arrastre
-const ARROW_W = 90; // zona de flechas de skip a la derecha
-const TOTAL_W = DRAG_W + VNW + ARROW_W;
-const N_CURVES = 3, CURVE_STEP = 24;
-const nodeTop = (i: number) => VINH + VGAP + i * (VNH + VGAP);
-
-function QuestionGraph({ questions, onClickNode, onClickInsert, intro, onEditIntro,
-  onDragStart, onDragOver, onDragEnd }: {
-  questions: EditQ[];
-  onClickNode: (i: number) => void;
-  onClickInsert: (after: number | null) => void;
-  intro: string;
-  onEditIntro: () => void;
-  onDragStart: (i: number) => void;
-  onDragOver: (e: React.DragEvent, i: number) => void;
-  onDragEnd: () => void;
-}) {
-  const n = questions.length;
-  const totalH = VINH + VGAP + n * (VNH + VGAP) + 48;
-  const nodeX = DRAG_W; // left edge of node content
-  const arrowBaseX = DRAG_W + VNW; // right edge of nodes (where skip arrows start)
-  const midX = DRAG_W + VNW / 2; // center X for vertical arrows
-
-  // Build skip arrows
-  type SkipArrow = { from: number; to: number | null; label: string };
-  const skipArrows: SkipArrow[] = [];
-  for (let i = 0; i < n; i++) {
-    for (const cond of (questions[i].condiciones ?? [])) {
-      skipArrows.push({ from: i, to: cond.ir_a_orden, label: trunc(`"${cond.si_respuesta}"`) });
-    }
-  }
-  const arcLevel = skipArrows.map((_, i) => i % N_CURVES);
-
-  return (
-    <div style={{ position: "relative", width: TOTAL_W, minHeight: totalH }}>
-      {/* SVG overlay para flechas */}
-      <svg width={TOTAL_W} height={totalH}
-        style={{ position: "absolute", top: 0, left: 0, pointerEvents: "none", overflow: "visible" }}>
-        <defs>
-          <marker id="va" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto">
-            <path d="M0,0 L0,6 L7,3 z" fill="var(--border-strong)" />
-          </marker>
-          <marker id="vas" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto">
-            <path d="M0,0 L0,6 L7,3 z" fill="var(--accent-blue)" />
-          </marker>
-        </defs>
-
-        {/* Bienvenida → P1 */}
-        {n > 0 && <line x1={midX} y1={VINH} x2={midX} y2={VINH + VGAP}
-          stroke="var(--border-strong)" strokeWidth={1.4} markerEnd="url(#va)" />}
-
-        {/* Flechas del flujo normal (P_i → P_{i+1}) */}
-        {questions.map((q, i) => {
-          if (i >= n - 1) return null;
-          const hasFinCond = (q.condiciones ?? []).some((c) => c.ir_a_orden === null);
-          if (hasFinCond) return null;
-          const y1 = nodeTop(i) + VNH, y2 = nodeTop(i + 1);
-          return <line key={`n${i}`} x1={midX} y1={y1} x2={midX} y2={y2}
-            stroke="var(--border-strong)" strokeWidth={1.4} markerEnd="url(#va)" />;
-        })}
-
-        {/* Skip arrows: S-curves a la derecha */}
-        {skipArrows.map((a, ai) => {
-          const lv = arcLevel[ai];
-          const curveX = arrowBaseX + 20 + lv * CURVE_STEP;
-          const y1 = nodeTop(a.from) + VNH / 2;
-
-          if (a.to === null) {
-            // FIN: baja por la derecha
-            const finY = nodeTop(a.from) + VNH + 28;
-            return (
-              <g key={ai}>
-                <path d={`M${arrowBaseX},${y1} H${curveX} V${finY}`}
-                  stroke="var(--accent-blue)" strokeWidth={1.3} strokeDasharray="4 3"
-                  fill="none" markerEnd="url(#vas)" />
-                <text x={curveX + 3} y={finY - 4} fontSize={8} fill="var(--accent-blue)">FIN</text>
-                <text x={arrowBaseX + 4} y={y1 - 4} fontSize={8} fill="var(--accent-blue)"
-                  opacity={0.85}>{a.label}</text>
-              </g>
-            );
-          }
-
-          const y2 = nodeTop(a.to) + VNH / 2;
-          const midY = (y1 + y2) / 2;
-          // S-curve: sale del borde derecho del nodo fuente, se curva a la derecha, y regresa
-          return (
-            <g key={ai}>
-              <path d={`M${arrowBaseX},${y1} C${curveX},${y1} ${curveX},${y2} ${arrowBaseX},${y2}`}
-                stroke="var(--accent-blue)" strokeWidth={1.3} strokeDasharray="5 3"
-                fill="none" opacity={0.85} markerEnd="url(#vas)" />
-              <text x={curveX + 3} y={midY + 4} fontSize={8} fill="var(--accent-blue)"
-                opacity={0.85}>{a.label}</text>
-            </g>
-          );
-        })}
-      </svg>
-
-      {/* Nodo bienvenida */}
-      <div onClick={onEditIntro} className="graph-node graph-node-welcome"
-        style={{ position: "absolute", left: nodeX, top: 0, width: VNW, height: VINH, cursor: "pointer" }}>
-        <div className="graph-node-head">
-          <span className="graph-pnum" style={{ color: "var(--accent-blue)" }}>✦</span>
-          <span className="graph-type">Bienvenida</span>
-        </div>
-        <div className="graph-node-body"
-          style={{ fontStyle: intro ? "normal" : "italic", opacity: intro ? 1 : 0.5 }}>
-          {intro || "Clic para añadir una introducción al entrevistado…"}
-        </div>
-      </div>
-
-      {/* Nodos de preguntas con drag-to-reorder */}
-      {questions.map((q, i) => {
-        const typeLbl = Q_TYPES.find((t) => t.v === q.tipo)?.label ?? q.tipo;
-        const top = nodeTop(i);
-        return (
-          <div key={i} style={{ position: "absolute", left: 0, top, width: DRAG_W + VNW,
-                                 display: "flex", alignItems: "stretch" }}
-            draggable
-            onDragStart={() => onDragStart(i)}
-            onDragOver={(e) => onDragOver(e, i)}
-            onDragEnd={onDragEnd}>
-            {/* Handle de arrastre */}
-            <div style={{ width: DRAG_W, display: "flex", alignItems: "center",
-                          justifyContent: "center", cursor: "grab", flexShrink: 0,
-                          color: "var(--muted)", fontSize: "1rem", userSelect: "none" }}
-              title="Arrastra para reordenar">⠿</div>
-            {/* Card de la pregunta */}
-            <div className="graph-node" onClick={() => onClickNode(i)}
-              style={{ flex: 1, height: VNH, cursor: "pointer" }}>
-              <div className="graph-node-head">
-                <span className="graph-pnum">P{i + 1}</span>
-                <span className="graph-type">{typeLbl}</span>
-                {q.opciones?.length > 0 &&
-                  <span className="muted" style={{ fontSize: "0.72rem", marginLeft: 4 }}>
-                    {trunc(q.opciones.slice(0, 2).join(", "), 28)}
-                  </span>}
-                {(q.condiciones ?? []).length > 0 &&
-                  <span style={{ marginLeft: "auto", fontSize: "0.8rem", color: "var(--accent-blue)" }}>⤵</span>}
-              </div>
-              <div className="graph-node-body" style={{ fontSize: "0.83rem" }}>
-                {q.texto || <span style={{ fontStyle: "italic", opacity: 0.4 }}>Sin texto — clic para editar</span>}
-              </div>
-            </div>
-          </div>
-        );
-      })}
-
-      {/* Botones "+" entre nodos y al final */}
-      {questions.map((_, i) => i < n - 1 && (
-        <button key={`ins-${i}`} className="graph-insert-btn"
-          style={{ position: "absolute", left: DRAG_W + VNW / 2 - 10,
-                   top: nodeTop(i) + VNH + VGAP / 2 - 10 }}
-          onClick={(e) => { e.stopPropagation(); onClickInsert(i); }}>+</button>
-      ))}
-      <button className="graph-insert-btn"
-        style={{ position: "absolute", left: DRAG_W + VNW / 2 - 10,
-                 top: n > 0 ? nodeTop(n - 1) + VNH + VGAP : VINH + VGAP }}
-        onClick={() => onClickInsert(n - 1)}>+</button>
     </div>
   );
 }

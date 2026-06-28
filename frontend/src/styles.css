@@ -931,3 +931,99 @@ a.brand { text-decoration: none; color: inherit; }
 .graph-insert-btn:hover {
   background: var(--accent-blue); border-color: var(--accent-blue); color: #fff;
 }
+
+/* ====================== Survey cards (estilo SurveyMonkey) ===================== */
+.sq-intro-card {
+  border: 2px dashed var(--accent-blue);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  cursor: pointer;
+  margin-bottom: 0;
+  transition: background 0.12s;
+}
+.sq-intro-card:hover { background: rgba(91,140,255,0.06); }
+.sq-intro-label {
+  font-size: 0.72rem; font-weight: 600; letter-spacing: 0.07em;
+  text-transform: uppercase; color: var(--accent-blue); margin-bottom: 6px;
+}
+.sq-intro-text { font-size: 0.9rem; line-height: 1.5; color: var(--text-dim); }
+.sq-intro-placeholder { font-style: italic; color: var(--muted); font-size: 0.88rem; }
+
+.sq-add-row {
+  display: flex; justify-content: center;
+  padding: 6px 0;
+}
+.sq-add-btn {
+  background: none; border: 1.5px dashed var(--border-strong);
+  border-radius: 6px; padding: 5px 1.4rem;
+  font-size: 0.8rem; color: var(--muted); cursor: pointer;
+  transition: border-color 0.12s, color 0.12s;
+}
+.sq-add-btn:hover { border-color: var(--accent-blue); color: var(--accent-blue); background: none; }
+
+.sq-card {
+  display: flex; align-items: stretch;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-card);
+  transition: border-color 0.12s, box-shadow 0.12s;
+  cursor: default;
+}
+.sq-card:hover { border-color: var(--accent-blue); box-shadow: 0 2px 12px rgba(0,0,0,.12); }
+
+.sq-card-drag {
+  width: 28px; display: flex; align-items: center; justify-content: center;
+  color: var(--muted); font-size: 1.05rem;
+  cursor: grab; flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  user-select: none;
+}
+.sq-card-drag:hover { color: var(--text); }
+
+.sq-card-main { flex: 1; padding: 0.85rem 1rem; min-width: 0; }
+
+.sq-card-meta {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 6px; flex-wrap: wrap;
+}
+.sq-card-num {
+  font-weight: 700; font-size: 0.78rem; color: var(--accent-blue);
+  font-family: var(--font-label);
+}
+.sq-card-type {
+  font-size: 0.72rem; letter-spacing: 0.04em;
+  background: var(--bg-2); border: 1px solid var(--border);
+  border-radius: 3px; padding: 1px 6px; color: var(--text-dim);
+}
+.sq-card-logic {
+  font-size: 0.72rem; color: var(--accent-blue);
+  background: rgba(91,140,255,0.1); border-radius: 3px; padding: 1px 6px;
+}
+.sq-card-req { color: var(--danger); font-weight: 700; font-size: 0.9rem; }
+
+.sq-card-text {
+  font-size: 0.92rem; line-height: 1.45;
+  margin-bottom: 6px; color: var(--text);
+  white-space: pre-wrap;
+}
+.sq-card-opts {
+  display: flex; flex-wrap: wrap; gap: 6px 16px; margin-bottom: 4px;
+}
+.sq-card-opt {
+  font-size: 0.8rem; color: var(--text-dim);
+}
+.sq-card-open {
+  font-size: 0.8rem; color: var(--muted); font-style: italic;
+}
+.sq-card-skip {
+  font-size: 0.78rem; color: var(--accent-blue);
+  margin-top: 4px; opacity: 0.85;
+}
+
+.sq-card-actions {
+  display: flex; flex-direction: column; justify-content: center;
+  gap: 6px; padding: 0.6rem 0.75rem;
+  border-left: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.sq-card-actions button { min-width: 60px; font-size: 0.8rem; }

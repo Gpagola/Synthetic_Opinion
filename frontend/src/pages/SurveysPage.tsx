@@ -667,8 +667,8 @@ function RunTab({ survey, surveyId, estado, progress, results, breakVar, setBrea
               <select value={breakVar} onChange={(e) => setBreakVar(e.target.value)}>
                 {BREAKS.map((b) => <option key={b.v} value={b.v}>Cruce: {b.label}</option>)}
               </select>
-              <a href={api.surveyExportPptxUrl(surveyId)}>
-                <button className="secondary" disabled={estado !== "completed"}>↓ PowerPoint</button>
+              <a href={api.surveyExportUrl(surveyId)}>
+                <button className="secondary" disabled={estado !== "completed"}>↓ Excel</button>
               </a>
             </div>
           </div>

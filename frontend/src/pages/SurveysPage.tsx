@@ -241,9 +241,6 @@ function SurveyDetail({ id, onBack }: { id: number; onBack: () => void }) {
           {survey.tema && <p className="muted" style={{ margin: "2px 0 0" }}>{survey.tema}</p>}
         </div>
         <div style={{ flex: 1 }} />
-        <a href={api.surveyExportUrl(id)}>
-          <button className="secondary" disabled={estado !== "completed"}>↓ Excel</button>
-        </a>
       </div>
 
       {/* Tabs */}
@@ -273,6 +270,7 @@ function SurveyDetail({ id, onBack }: { id: number; onBack: () => void }) {
       {tab === "run" && (
         <RunTab
           survey={survey}
+          surveyId={id}
           estado={estado}
           progress={progress}
           results={results}
@@ -582,10 +580,10 @@ function NodeEditModal({ questions, editIdx, insertAfter, onClose, onSave }: {
 
 // ─── Tab Ejecución ────────────────────────────────────────────────────────────
 
-function RunTab({ survey, estado, progress, results, breakVar, setBreakVar,
+function RunTab({ survey, surveyId, estado, progress, results, breakVar, setBreakVar,
   method, setMethod, N, setN, seg, setSeg, modelo, setModelo,
   previewN, regions, country, onLaunch, onCancel, questionsEmpty }: {
-  survey: Survey; estado: string; progress: { done: number; total: number } | null;
+  survey: Survey; surveyId: number; estado: string; progress: { done: number; total: number } | null;
   results: SurveyResults | null; breakVar: string; setBreakVar: (v: string) => void;
   method: "representativa" | "aleatoria" | "segmento"; setMethod: (m: any) => void;
   N: number; setN: (n: number) => void;
@@ -665,9 +663,14 @@ function RunTab({ survey, estado, progress, results, breakVar, setBreakVar,
         <div className="card">
           <div className="flex-between">
             <h3>Resultados {results ? `(${results.total_respuestas} resp.)` : ""}</h3>
-            <select value={breakVar} onChange={(e) => setBreakVar(e.target.value)}>
-              {BREAKS.map((b) => <option key={b.v} value={b.v}>Cruce: {b.label}</option>)}
-            </select>
+            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+              <select value={breakVar} onChange={(e) => setBreakVar(e.target.value)}>
+                {BREAKS.map((b) => <option key={b.v} value={b.v}>Cruce: {b.label}</option>)}
+              </select>
+              <a href={api.surveyExportUrl(surveyId)}>
+                <button className="secondary" disabled={estado !== "completed"}>↓ Excel</button>
+              </a>
+            </div>
           </div>
           {estado === "running" ? (
             <p className="muted" style={{ padding: "1rem 0" }}>Los resultados se actualizan en tiempo real…</p>

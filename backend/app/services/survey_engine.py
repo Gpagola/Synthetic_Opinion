@@ -386,12 +386,56 @@ def export_xlsx(db: Session, survey: Survey) -> bytes:
     ws = wb.active
     ws.title = "Respuestas"
     qcols = list(survey.questions)
-    ws.append(["persona_id", "edad", "genero", "region", "ingresos", "educacion"]
-              + [f"P{i+1}" for i in range(len(qcols))])
+
+    # Columnas de perfil sociodemográfico del individuo + matices del enriquecimiento
+    PERFIL_COLS = [
+        ("persona_id",       lambda s, e: None),          # se llena aparte
+        ("edad",             lambda s, e: s.get("edad")),
+        ("genero",           lambda s, e: s.get("genero")),
+        ("region",           lambda s, e: s.get("region")),
+        ("pais_origen",      lambda s, e: s.get("pais_origen")),
+        ("nivel_educativo",  lambda s, e: s.get("nivel_educativo")),
+        ("ingresos",         lambda s, e: s.get("nivel_ingresos") or s.get("ingresos")),
+        ("ocupacion",        lambda s, e: s.get("ocupacion")),
+        ("estado_civil",     lambda s, e: s.get("estado_civil")),
+        # enriquecimiento A–H (si existe)
+        ("convivencia",      lambda s, e: (e.get("hogar_familia") or {}).get("convivencia")),
+        ("vivienda",         lambda s, e: (e.get("hogar_familia") or {}).get("regimen_vivienda")),
+        ("tiene_hijos",      lambda s, e: (e.get("hogar_familia") or {}).get("tiene_hijos")),
+        ("num_hijos",        lambda s, e: (e.get("hogar_familia") or {}).get("num_hijos")),
+        ("vehiculo",         lambda s, e: (e.get("vehiculos") or {}).get("principal", {}).get("marca") if (e.get("vehiculos") or {}).get("tiene_vehiculo") else "No"),
+        ("banco",            lambda s, e: (e.get("banca") or {}).get("banco_principal")),
+        ("salud",            lambda s, e: ((e.get("seguros") or {}).get("salud") or {}).get("cobertura")),
+        ("operador_movil",   lambda s, e: (e.get("telecom") or {}).get("operador_movil")),
+        ("situacion_laboral",lambda s, e: (e.get("laboral") or {}).get("situacion")),
+        ("supermercado",     lambda s, e: (e.get("consumo_habitos") or {}).get("supermercado_habitual")),
+    ]
+
+    # Para los enriquecidos necesitamos la tabla Persona (para leer sociodemografico completo)
+    from app.models import Persona as PersonaModel
+    persona_map = {}
+    if responses:
+        pids = [r.persona_id for r in responses]
+        personas = db.query(PersonaModel).filter(PersonaModel.id.in_(pids)).all()
+        persona_map = {p.id: p.sociodemografico or {} for p in personas}
+
+    # Fila 1: cabecera — nombre de columna de perfil + "P1 – texto pregunta"
+    header_perfil = [col for col, _ in PERFIL_COLS]
+    header_qs = [f"P{i+1} – {q.texto}" for i, q in enumerate(qcols)]
+    ws.append(header_perfil + header_qs)
+
     for r in responses:
-        s = r.snapshot or {}
-        row = [r.persona_id, s.get("edad"), s.get("genero"), s.get("region"),
-               s.get("ingresos"), s.get("nivel_educativo")]
+        snap = r.snapshot or {}
+        full_sd = persona_map.get(r.persona_id, snap)  # datos completos si disponibles
+        enr = full_sd  # los matices A-H también viven en sociodemografico
+
+        row = []
+        for idx, (col, fn) in enumerate(PERFIL_COLS):
+            if col == "persona_id":
+                row.append(r.persona_id)
+            else:
+                row.append(fn(snap, enr))
+
         for q in qcols:
             v = r.respuestas.get(str(q.id))
             row.append(", ".join(v) if isinstance(v, list) else v)

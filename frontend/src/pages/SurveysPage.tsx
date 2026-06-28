@@ -308,8 +308,21 @@ function DesignTab({ survey, setSurvey, questions, setQuestions, saving, onSave 
   const [editIdx, setEditIdx] = useState<number | null>(null);
   const [insertAfter, setInsertAfter] = useState<number | null>(null);
   const [editIntro, setEditIntro] = useState(false);
+  const dragIdx = useRef<number | null>(null);
 
   const openEdit = (idx: number) => { setInsertAfter(null); setEditIdx(idx); };
+
+  const onDragStart = (i: number) => { dragIdx.current = i; };
+  const onDragOver = (e: React.DragEvent, i: number) => {
+    e.preventDefault();
+    const from = dragIdx.current;
+    if (from === null || from === i) return;
+    setQuestions(((qs: EditQ[]) => {
+      const next = [...qs]; const [m] = next.splice(from, 1); next.splice(i, 0, m);
+      dragIdx.current = i; return next;
+    })(questions));
+  };
+  const onDragEnd = () => { dragIdx.current = null; };
   const openInsert = (after: number | null) => { setInsertAfter(after); setEditIdx(null); };
 
   const handleImport = (draft: SurveyImportDraft) => {
@@ -352,6 +365,9 @@ function DesignTab({ survey, setSurvey, questions, setQuestions, saving, onSave 
             onClickInsert={openInsert}
             intro={survey.descripcion ?? ""}
             onEditIntro={() => setEditIntro(true)}
+            onDragStart={onDragStart}
+            onDragOver={onDragOver}
+            onDragEnd={onDragEnd}
           />
         )}
       </div>
@@ -410,105 +426,105 @@ function DesignTab({ survey, setSurvey, questions, setQuestions, saving, onSave 
 
 // ─── Grafo de preguntas ────────────────────────────────────────────────────────
 
-// Grafo: constantes de layout
-const NW = 158, NH = 82, GAP = 48, INTRO_W = 144;
-// Arcos de skip: 3 niveles escalonados con altura fija (no crece con la distancia)
-const N_LEVELS = 3, LEVEL_STEP = 18, ARC_BASE = 28;
-const ARC_SPACE = ARC_BASE + (N_LEVELS - 1) * LEVEL_STEP + 16; // espacio total sobre nodos
-const ROW_Y = ARC_SPACE + 16;
-const trunc = (s: string, n = 16) => s.length > n ? s.slice(0, n) + "…" : s;
+const trunc = (s: string, max = 18) => s.length > max ? s.slice(0, max) + "…" : s;
 
-function QuestionGraph({ questions, onClickNode, onClickInsert, intro, onEditIntro }: {
+// Layout vertical
+const VNW = 480;   // ancho del nodo
+const VNH = 76;    // alto del nodo
+const VGAP = 10;   // espacio entre nodos
+const VINH = 68;   // alto del nodo de bienvenida
+const DRAG_W = 28; // ancho del handle de arrastre
+const ARROW_W = 90; // zona de flechas de skip a la derecha
+const TOTAL_W = DRAG_W + VNW + ARROW_W;
+const N_CURVES = 3, CURVE_STEP = 24;
+const nodeTop = (i: number) => VINH + VGAP + i * (VNH + VGAP);
+
+function QuestionGraph({ questions, onClickNode, onClickInsert, intro, onEditIntro,
+  onDragStart, onDragOver, onDragEnd }: {
   questions: EditQ[];
   onClickNode: (i: number) => void;
   onClickInsert: (after: number | null) => void;
   intro: string;
   onEditIntro: () => void;
+  onDragStart: (i: number) => void;
+  onDragOver: (e: React.DragEvent, i: number) => void;
+  onDragEnd: () => void;
 }) {
   const n = questions.length;
-  const OFFSET = GAP + INTRO_W + GAP; // left = GAP, entonces P1 empieza en OFFSET
-  const totalW = OFFSET + n * (NW + GAP) + 32;
-  const svgH = ROW_Y + NH + 40;
+  const totalH = VINH + VGAP + n * (VNH + VGAP) + 48;
+  const nodeX = DRAG_W; // left edge of node content
+  const arrowBaseX = DRAG_W + VNW; // right edge of nodes (where skip arrows start)
+  const midX = DRAG_W + VNW / 2; // center X for vertical arrows
 
-  // Centro X de nodo i
-  const cx = (i: number) => OFFSET + i * (NW + GAP) + NW / 2;
-
-  type Arrow = { from: number; to: number | null; label: string; isSkip: boolean };
-  const arrows: Arrow[] = [];
+  // Build skip arrows
+  type SkipArrow = { from: number; to: number | null; label: string };
+  const skipArrows: SkipArrow[] = [];
   for (let i = 0; i < n; i++) {
-    const q = questions[i];
-    const hasFinCond = (q.condiciones ?? []).some((c) => c.ir_a_orden === null);
-    if (!hasFinCond && i < n - 1)
-      arrows.push({ from: i, to: i + 1, label: "", isSkip: false });
-    for (const cond of (q.condiciones ?? [])) {
-      const label = trunc(`Si "${cond.si_respuesta}"`);
-      if (cond.ir_a_orden === null)
-        arrows.push({ from: i, to: null, label, isSkip: true });
-      else if (cond.ir_a_orden !== i + 1)
-        arrows.push({ from: i, to: cond.ir_a_orden, label, isSkip: true });
+    for (const cond of (questions[i].condiciones ?? [])) {
+      skipArrows.push({ from: i, to: cond.ir_a_orden, label: trunc(`"${cond.si_respuesta}"`) });
     }
   }
-  // Asignar nivel (escalonado) a los arcos de skip
-  let skipIdx = 0;
-  const arcLevel = arrows.map((a) => a.isSkip && a.to !== null ? (skipIdx++) % N_LEVELS : -1);
-
-  const nodeY = ROW_Y;
+  const arcLevel = skipArrows.map((_, i) => i % N_CURVES);
 
   return (
-    <div style={{ position: "relative", minWidth: totalW, height: svgH + 8 }}>
-      {/* SVG unificado */}
-      <svg width={totalW} height={svgH}
+    <div style={{ position: "relative", width: TOTAL_W, minHeight: totalH }}>
+      {/* SVG overlay para flechas */}
+      <svg width={TOTAL_W} height={totalH}
         style={{ position: "absolute", top: 0, left: 0, pointerEvents: "none", overflow: "visible" }}>
         <defs>
-          <marker id="ga" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto">
+          <marker id="va" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto">
             <path d="M0,0 L0,6 L7,3 z" fill="var(--border-strong)" />
           </marker>
-          <marker id="gas" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto">
+          <marker id="vas" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto">
             <path d="M0,0 L0,6 L7,3 z" fill="var(--accent-blue)" />
           </marker>
         </defs>
 
         {/* Bienvenida → P1 */}
-        {n > 0 && <line
-          x1={GAP + INTRO_W} y1={nodeY + NH / 2}
-          x2={OFFSET} y2={nodeY + NH / 2}
-          stroke="var(--border-strong)" strokeWidth={1.4} markerEnd="url(#ga)" />}
+        {n > 0 && <line x1={midX} y1={VINH} x2={midX} y2={VINH + VGAP}
+          stroke="var(--border-strong)" strokeWidth={1.4} markerEnd="url(#va)" />}
 
-        {arrows.map((a, ai) => {
-          const x1 = cx(a.from) + NW / 2;
-          const mid_y = nodeY + NH / 2;
+        {/* Flechas del flujo normal (P_i → P_{i+1}) */}
+        {questions.map((q, i) => {
+          if (i >= n - 1) return null;
+          const hasFinCond = (q.condiciones ?? []).some((c) => c.ir_a_orden === null);
+          if (hasFinCond) return null;
+          const y1 = nodeTop(i) + VNH, y2 = nodeTop(i + 1);
+          return <line key={`n${i}`} x1={midX} y1={y1} x2={midX} y2={y2}
+            stroke="var(--border-strong)" strokeWidth={1.4} markerEnd="url(#va)" />;
+        })}
 
-          // FIN: flecha hacia abajo
-          if (a.to === null) return (
-            <g key={ai}>
-              <line x1={x1} y1={nodeY + NH} x2={x1} y2={nodeY + NH + 26}
-                stroke="var(--accent-blue)" strokeWidth={1.3} strokeDasharray="4 3"
-                markerEnd="url(#gas)" />
-              <text x={x1 + 4} y={nodeY + NH + 21} fontSize={8}
-                fill="var(--accent-blue)" opacity={0.8}>{a.label} → FIN</text>
-            </g>
-          );
+        {/* Skip arrows: S-curves a la derecha */}
+        {skipArrows.map((a, ai) => {
+          const lv = arcLevel[ai];
+          const curveX = arrowBaseX + 20 + lv * CURVE_STEP;
+          const y1 = nodeTop(a.from) + VNH / 2;
 
-          const x2 = cx(a.to) - NW / 2;
+          if (a.to === null) {
+            // FIN: baja por la derecha
+            const finY = nodeTop(a.from) + VNH + 28;
+            return (
+              <g key={ai}>
+                <path d={`M${arrowBaseX},${y1} H${curveX} V${finY}`}
+                  stroke="var(--accent-blue)" strokeWidth={1.3} strokeDasharray="4 3"
+                  fill="none" markerEnd="url(#vas)" />
+                <text x={curveX + 3} y={finY - 4} fontSize={8} fill="var(--accent-blue)">FIN</text>
+                <text x={arrowBaseX + 4} y={y1 - 4} fontSize={8} fill="var(--accent-blue)"
+                  opacity={0.85}>{a.label}</text>
+              </g>
+            );
+          }
 
-          // Normal: línea horizontal
-          if (!a.isSkip) return (
-            <line key={ai} x1={x1} y1={mid_y} x2={x2} y2={mid_y}
-              stroke="var(--border-strong)" strokeWidth={1.4} markerEnd="url(#ga)" />
-          );
-
-          // Skip: arco con nivel escalonado y altura FIJA (no crece con distancia)
-          const lv = arcLevel[ai]; // 0, 1 o 2
-          const arcY = nodeY - ARC_BASE - lv * LEVEL_STEP;
-          const mx = (x1 + x2) / 2;
+          const y2 = nodeTop(a.to) + VNH / 2;
+          const midY = (y1 + y2) / 2;
+          // S-curve: sale del borde derecho del nodo fuente, se curva a la derecha, y regresa
           return (
             <g key={ai}>
-              <path d={`M${x1},${nodeY} C${x1},${arcY} ${x2},${arcY} ${x2},${nodeY}`}
-                stroke="var(--accent-blue)" strokeWidth={1.3}
-                strokeDasharray="5 3" fill="none" opacity={0.82}
-                markerEnd="url(#gas)" />
-              <text x={mx} y={arcY - 3} textAnchor="middle" fontSize={8}
-                fill="var(--accent-blue)" opacity={0.85}>{a.label}</text>
+              <path d={`M${arrowBaseX},${y1} C${curveX},${y1} ${curveX},${y2} ${arrowBaseX},${y2}`}
+                stroke="var(--accent-blue)" strokeWidth={1.3} strokeDasharray="5 3"
+                fill="none" opacity={0.85} markerEnd="url(#vas)" />
+              <text x={curveX + 3} y={midY + 4} fontSize={8} fill="var(--accent-blue)"
+                opacity={0.85}>{a.label}</text>
             </g>
           );
         })}
@@ -516,48 +532,64 @@ function QuestionGraph({ questions, onClickNode, onClickInsert, intro, onEditInt
 
       {/* Nodo bienvenida */}
       <div onClick={onEditIntro} className="graph-node graph-node-welcome"
-        style={{ left: GAP, top: nodeY, width: INTRO_W, height: NH, position: "absolute" }}>
+        style={{ position: "absolute", left: nodeX, top: 0, width: VNW, height: VINH, cursor: "pointer" }}>
         <div className="graph-node-head">
           <span className="graph-pnum" style={{ color: "var(--accent-blue)" }}>✦</span>
           <span className="graph-type">Bienvenida</span>
         </div>
         <div className="graph-node-body"
           style={{ fontStyle: intro ? "normal" : "italic", opacity: intro ? 1 : 0.5 }}>
-          {intro || "Añadir introducción…"}
+          {intro || "Clic para añadir una introducción al entrevistado…"}
         </div>
       </div>
 
-      {/* Nodos de pregunta */}
+      {/* Nodos de preguntas con drag-to-reorder */}
       {questions.map((q, i) => {
-        const x = OFFSET + i * (NW + GAP);
         const typeLbl = Q_TYPES.find((t) => t.v === q.tipo)?.label ?? q.tipo;
+        const top = nodeTop(i);
         return (
-          <div key={i} onClick={() => onClickNode(i)} className="graph-node"
-            style={{ left: x, top: nodeY, width: NW, height: NH, position: "absolute" }}>
-            <div className="graph-node-head">
-              <span className="graph-pnum">P{i + 1}</span>
-              <span className="graph-type">{typeLbl}</span>
-              {(q.condiciones ?? []).length > 0 &&
-                <span style={{ marginLeft: "auto", fontSize: "0.8rem" }}>⤵</span>}
-            </div>
-            <div className="graph-node-body">
-              {q.texto || <span style={{ fontStyle: "italic", opacity: 0.45 }}>Sin texto</span>}
+          <div key={i} style={{ position: "absolute", left: 0, top, width: DRAG_W + VNW,
+                                 display: "flex", alignItems: "stretch" }}
+            draggable
+            onDragStart={() => onDragStart(i)}
+            onDragOver={(e) => onDragOver(e, i)}
+            onDragEnd={onDragEnd}>
+            {/* Handle de arrastre */}
+            <div style={{ width: DRAG_W, display: "flex", alignItems: "center",
+                          justifyContent: "center", cursor: "grab", flexShrink: 0,
+                          color: "var(--muted)", fontSize: "1rem", userSelect: "none" }}
+              title="Arrastra para reordenar">⠿</div>
+            {/* Card de la pregunta */}
+            <div className="graph-node" onClick={() => onClickNode(i)}
+              style={{ flex: 1, height: VNH, cursor: "pointer" }}>
+              <div className="graph-node-head">
+                <span className="graph-pnum">P{i + 1}</span>
+                <span className="graph-type">{typeLbl}</span>
+                {q.opciones?.length > 0 &&
+                  <span className="muted" style={{ fontSize: "0.72rem", marginLeft: 4 }}>
+                    {trunc(q.opciones.slice(0, 2).join(", "), 28)}
+                  </span>}
+                {(q.condiciones ?? []).length > 0 &&
+                  <span style={{ marginLeft: "auto", fontSize: "0.8rem", color: "var(--accent-blue)" }}>⤵</span>}
+              </div>
+              <div className="graph-node-body" style={{ fontSize: "0.83rem" }}>
+                {q.texto || <span style={{ fontStyle: "italic", opacity: 0.4 }}>Sin texto — clic para editar</span>}
+              </div>
             </div>
           </div>
         );
       })}
 
-      {/* "+" entre nodos (en los huecos) */}
+      {/* Botones "+" entre nodos y al final */}
       {questions.map((_, i) => i < n - 1 && (
         <button key={`ins-${i}`} className="graph-insert-btn"
-          style={{ position: "absolute",
-                   left: OFFSET + (i + 1) * (NW + GAP) - GAP / 2 - 10,
-                   top: nodeY + NH / 2 - 10 }}
+          style={{ position: "absolute", left: DRAG_W + VNW / 2 - 10,
+                   top: nodeTop(i) + VNH + VGAP / 2 - 10 }}
           onClick={(e) => { e.stopPropagation(); onClickInsert(i); }}>+</button>
       ))}
-      {/* "+" al final */}
       <button className="graph-insert-btn"
-        style={{ position: "absolute", left: OFFSET + n * (NW + GAP), top: nodeY + NH / 2 - 10 }}
+        style={{ position: "absolute", left: DRAG_W + VNW / 2 - 10,
+                 top: n > 0 ? nodeTop(n - 1) + VNH + VGAP : VINH + VGAP }}
         onClick={() => onClickInsert(n - 1)}>+</button>
     </div>
   );

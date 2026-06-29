@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCountry } from "../CountryContext";
 import { CountryCode } from "../countries";
+import { useLocale } from "../locales/index";
 
 /** Orbe de malla deformada + halo de partículas, dibujado en canvas (sin libs). */
 function Orb() {
@@ -143,6 +144,7 @@ function AndersenCredit() {
 export default function Landing() {
   const { setPais } = useCountry();
   const nav = useNavigate();
+  const { t } = useLocale();
   const go = (c: CountryCode) => { setPais(c); nav("/personas"); };
   return (
     <div className="landing">
@@ -150,7 +152,7 @@ export default function Landing() {
       <AndersenCredit />
       <div className="landing-content">
         <h1 className="landing-title">Personæ</h1>
-        <p className="landing-tagline">the masks through which a synthetic population speaks</p>
+        <p className="landing-tagline">{t("landing.tagline")}</p>
         <div className="landing-cards">
           <button className="country-card" onClick={() => go("CL")}>CHILE</button>
           <button className="country-card" onClick={() => go("ES")}>SPAIN</button>

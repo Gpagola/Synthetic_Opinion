@@ -9,17 +9,19 @@ import HelpModal from "./components/HelpModal";
 import ImportantModal from "./components/ImportantModal";
 import { CountryProvider, useCountry } from "./CountryContext";
 import { COUNTRY_LIST, CountryCode } from "./countries";
+import { LocaleProvider, useLocale, type Locale } from "./locales/index";
 import "./styles.css";
 
 function CountrySelect() {
   const { pais, setPais } = useCountry();
+  const { t } = useLocale();
   return (
     <select
       className="country-select"
       value={pais}
       onChange={(e) => setPais(e.target.value as CountryCode)}
-      title="País del escenario (población, focus y encuestas)"
-      aria-label="País del escenario"
+      title={t("nav.pais_title")}
+      aria-label={t("nav.pais_aria")}
     >
       {COUNTRY_LIST.map((c) => (
         <option key={c.codigo} value={c.codigo}>{c.nombre}</option>
@@ -32,6 +34,7 @@ function ThemeToggle() {
   const [theme, setTheme] = useState<string>(
     () => document.documentElement.dataset.theme || "dark"
   );
+  const { t } = useLocale();
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -43,23 +46,35 @@ function ThemeToggle() {
     <button
       className="theme-toggle"
       onClick={() => setTheme(isDark ? "light" : "dark")}
-      title={isDark ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
-      aria-label="Cambiar tema"
+      title={isDark ? t("nav.tema_claro") : t("nav.tema_oscuro")}
+      aria-label={t("nav.tema_aria")}
     >
       {isDark ? (
-        // Sol (cambiar a claro)
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
           strokeWidth="1.7" strokeLinecap="round">
           <circle cx="12" cy="12" r="4.2" />
           <path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M19.4 4.6l-1.8 1.8M6.4 17.6l-1.8 1.8" />
         </svg>
       ) : (
-        // Luna (cambiar a oscuro)
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
           strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
           <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
         </svg>
       )}
+    </button>
+  );
+}
+
+function LocaleToggle() {
+  const { locale, setLocale, t } = useLocale();
+  return (
+    <button
+      className="locale-toggle"
+      onClick={() => setLocale(locale === "es" ? "en" : "es")}
+      aria-label={t("nav.locale_toggle_aria")}
+      title={t("nav.locale_toggle_aria")}
+    >
+      {locale === "es" ? "EN" : "ES"}
     </button>
   );
 }
@@ -78,45 +93,45 @@ function Logo() {
 function Layout() {
   const [help, setHelp] = useState(false);
   const [important, setImportant] = useState(false);
+  const { t } = useLocale();
   return (
     <div className="app">
       <header className="topbar">
         <div className="topbar-inner">
-          <NavLink to="/" className="brand" title="Portada">
+          <NavLink to="/" className="brand" title={t("nav.brand_title")}>
             <Logo />
             <div className="brand-text">
               <span className="brand-name">Personæ</span>
-              <span className="credit">
-                Desarrollado por Braintrust CS firma miembro de Andersen Consulting
-              </span>
+              <span className="credit">{t("nav.credit")}</span>
             </div>
           </NavLink>
           <nav>
-            <NavLink to="/personas">Población</NavLink>
-            <NavLink to="/focus-groups">Focus</NavLink>
-            <NavLink to="/surveys">Encuestas</NavLink>
+            <NavLink to="/personas">{t("nav.poblacion")}</NavLink>
+            <NavLink to="/focus-groups">{t("nav.focus")}</NavLink>
+            <NavLink to="/surveys">{t("nav.encuestas")}</NavLink>
           </nav>
           <div style={{ flex: 1 }} />
           <div className="topbar-actions">
-          <button className="important-btn" onClick={() => setImportant(true)} title="Aviso importante">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M10.3 3.2 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.2a2 2 0 0 0-3.4 0z" />
-              <path d="M12 9v4" /><path d="M12 17h.01" />
-            </svg>
-            Importante
-          </button>
-          <button className="help-btn" onClick={() => setHelp(true)} title="Ayuda">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="9.5" />
-              <path d="M9.2 9.2a2.8 2.8 0 0 1 5.4 1c0 1.8-2.6 2.2-2.6 4" />
-              <circle cx="12" cy="17.4" r="0.6" fill="currentColor" />
-            </svg>
-            Ayuda
-          </button>
-          <CountrySelect />
-          <ThemeToggle />
+            <button className="important-btn" onClick={() => setImportant(true)} title={t("nav.importante_label")}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.3 3.2 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.2a2 2 0 0 0-3.4 0z" />
+                <path d="M12 9v4" /><path d="M12 17h.01" />
+              </svg>
+              {t("nav.importante_label")}
+            </button>
+            <button className="help-btn" onClick={() => setHelp(true)} title={t("nav.ayuda_label")}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="9.5" />
+                <path d="M9.2 9.2a2.8 2.8 0 0 1 5.4 1c0 1.8-2.6 2.2-2.6 4" />
+                <circle cx="12" cy="17.4" r="0.6" fill="currentColor" />
+              </svg>
+              {t("nav.ayuda_label")}
+            </button>
+            <LocaleToggle />
+            <CountrySelect />
+            <ThemeToggle />
           </div>
         </div>
       </header>
@@ -146,9 +161,11 @@ function AppRoutes() {
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <BrowserRouter basename={import.meta.env.BASE_URL}>
-      <CountryProvider>
-        <AppRoutes />
-      </CountryProvider>
+      <LocaleProvider>
+        <CountryProvider>
+          <AppRoutes />
+        </CountryProvider>
+      </LocaleProvider>
     </BrowserRouter>
   </React.StrictMode>
 );

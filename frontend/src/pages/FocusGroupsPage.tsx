@@ -3,9 +3,11 @@ import Markdown from "react-markdown";
 import { api, Candidate, FocusGroup, Persona, QuestionItem, Report } from "../api/client";
 import { useCountry } from "../CountryContext";
 import { getCountry } from "../countries";
+import { useLocale } from "../locales/index";
 
 export default function FocusGroupsPage() {
   const { pais, country } = useCountry();
+  const { t } = useLocale();
   const [groups, setGroups] = useState<FocusGroup[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [creating, setCreating] = useState(false);
@@ -17,7 +19,7 @@ export default function FocusGroupsPage() {
   const visibles = groups.filter((g) => (g.pais || "ES") === pais);
 
   const borrar = async (g: FocusGroup) => {
-    if (!confirm(`¿Borrar el focus group "${g.nombre}"? Se eliminará su chat e informes. Las personas no se borran.`)) return;
+    if (!confirm(t("focus.confirmar_borrar", { name: g.nombre }))) return;
     setGroups((prev) => prev.filter((x) => x.id !== g.id)); // optimista
     try {
       await api.deleteFocusGroup(g.id);
@@ -39,15 +41,15 @@ export default function FocusGroupsPage() {
   return (
     <div className="w80">
       <div className="toolbar">
-        <h2 style={{ margin: 0, fontWeight: 400, fontSize: "2.6rem" }}>Focus Groups</h2>
+        <h2 style={{ margin: 0, fontWeight: 400, fontSize: "2.6rem" }}>{t("focus.titulo")}</h2>
         <div style={{ flex: 1 }} />
-        <button onClick={() => setCreating(true)}>+ Nuevo focus group</button>
+        <button onClick={() => setCreating(true)}>{t("focus.nuevo_btn")}</button>
       </div>
 
       <div className="card">
         <table>
           <thead>
-            <tr><th>Nombre</th><th>Tema</th><th>País</th><th>Idioma</th><th></th></tr>
+            <tr><th>{t("focus.tabla_nombre")}</th><th>{t("focus.tabla_tema")}</th><th>{t("focus.tabla_pais")}</th><th>{t("focus.tabla_idioma")}</th><th></th></tr>
           </thead>
           <tbody>
             {visibles.map((g) => (
@@ -57,13 +59,13 @@ export default function FocusGroupsPage() {
                 <td>{getCountry(g.pais).nombre}</td>
                 <td>{g.idioma}</td>
                 <td style={{ whiteSpace: "nowrap", textAlign: "right" }}>
-                  <button className="secondary" onClick={() => setSelectedId(g.id)}>Abrir chat</button>{" "}
-                  <button className="danger" onClick={() => borrar(g)}>Borrar</button>
+                  <button className="secondary" onClick={() => setSelectedId(g.id)}>{t("focus.btn_abrir")}</button>{" "}
+                  <button className="danger" onClick={() => borrar(g)}>{t("focus.btn_borrar")}</button>
                 </td>
               </tr>
             ))}
             {visibles.length === 0 && (
-              <tr><td colSpan={5} className="muted">No hay focus groups en {country.nombre} todavía.</td></tr>
+              <tr><td colSpan={5} className="muted">{t("focus.no_hay", { country: country.nombre })}</td></tr>
             )}
           </tbody>
         </table>
@@ -81,6 +83,7 @@ export default function FocusGroupsPage() {
 
 function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (id: number) => void }) {
   const { pais, country } = useCountry();
+  const { t } = useLocale();
   const [f, setF] = useState({ nombre: "", tema: "", descripcion: "", idioma: "es", pais });
   const [saving, setSaving] = useState(false);
   const create = async () => {
@@ -94,25 +97,25 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h2>Nuevo focus group</h2>
-        <div><label>Nombre</label>
+        <h2>{t("focus.crear_titulo")}</h2>
+        <div><label>{t("focus.crear_nombre")}</label>
           <input value={f.nombre} onChange={(e) => setF({ ...f, nombre: e.target.value })} /></div>
-        <div><label>Tema</label>
+        <div><label>{t("focus.crear_tema")}</label>
           <input value={f.tema} onChange={(e) => setF({ ...f, tema: e.target.value })} /></div>
-        <div><label>Descripción</label>
+        <div><label>{t("focus.crear_descripcion")}</label>
           <textarea rows={2} value={f.descripcion} onChange={(e) => setF({ ...f, descripcion: e.target.value })} /></div>
         <div className="row">
-          <div><label>Idioma</label>
+          <div><label>{t("focus.crear_idioma")}</label>
             <input value={f.idioma} onChange={(e) => setF({ ...f, idioma: e.target.value })} /></div>
-          <div><label>País (del escenario)</label>
-            <input value={country.nombre} disabled title="Se cambia con el selector de país de la barra superior" /></div>
+          <div><label>{t("focus.crear_pais")}</label>
+            <input value={country.nombre} disabled /></div>
         </div>
         <p className="muted" style={{ fontSize: "0.78rem" }}>
-          Solo podrás reclutar participantes de la población de {country.nombre}.
+          {t("focus.crear_nota", { country: country.nombre })}
         </p>
         <div className="flex-between" style={{ marginTop: "1rem" }}>
-          <button className="secondary" onClick={onClose}>Cancelar</button>
-          <button onClick={create} disabled={saving || !f.nombre}>Crear</button>
+          <button className="secondary" onClick={onClose}>{t("common.cancelar")}</button>
+          <button onClick={create} disabled={saving || !f.nombre}>{t("focus.crear_btn")}</button>
         </div>
       </div>
     </div>
@@ -156,6 +159,7 @@ function RecruitPanel({
   onConfirmed: (fg: FocusGroup) => void;
   onCollapse: () => void;
 }) {
+  const { t } = useLocale();
   const [perfil, setPerfil] = useState("");
   const [cantidad, setCantidad] = useState(6);
   const [loading, setLoading] = useState(false);
@@ -211,58 +215,58 @@ function RecruitPanel({
   return (
     <div className="card">
       <div className="flex-between">
-        <h3>Recruiting</h3>
-        <button className="secondary" onClick={onCollapse}>‹ Ocultar panel</button>
+        <h3>{t("recruit.titulo")}</h3>
+        <button className="secondary" onClick={onCollapse}>{t("recruit.ocultar")}</button>
       </div>
-      <p className="muted">Describe el público objetivo y la IA elegirá candidatos de la biblioteca.</p>
+      <p className="muted">{t("recruit.desc")}</p>
       <div>
-        <label>Perfil del público objetivo</label>
+        <label>{t("recruit.perfil_label")}</label>
         <textarea
           rows={3}
-          placeholder="Ej.: jóvenes urbanos sensibles a la sostenibilidad, con poder adquisitivo medio-alto"
+          placeholder={t("recruit.perfil_placeholder")}
           value={perfil}
           onChange={(e) => setPerfil(e.target.value)}
         />
       </div>
       <div className="row" style={{ marginTop: 6, alignItems: "flex-end" }}>
         <div style={{ maxWidth: 110 }}>
-          <label>Nº participantes</label>
+          <label>{t("recruit.n_participantes")}</label>
           <input type="number" min={1} max={30} value={cantidad}
             onChange={(e) => setCantidad(Math.max(1, +e.target.value || 1))} />
         </div>
         <button onClick={buscar} disabled={loading || !perfil.trim()}>
-          {loading ? "Buscando…" : "Buscar candidatos"}
+          {loading ? t("recruit.btn_buscando") : t("recruit.btn_buscar")}
         </button>
       </div>
 
       {candidatos && (
         <div style={{ marginTop: "0.9rem" }}>
           <div className="flex-between">
-            <strong>Candidatos ({candidatos.length})</strong>
-            {currentMemberIds.length > 0 && <span className="muted">Confirmados: {currentMemberIds.length}</span>}
+            <strong>{t("recruit.candidatos_titulo", { n: String(candidatos.length) })}</strong>
+            {currentMemberIds.length > 0 && <span className="muted">{t("recruit.confirmados", { n: String(currentMemberIds.length) })}</span>}
           </div>
-          {candidatos.length === 0 && <p className="muted">Ningún candidato. Prueba con otro perfil.</p>}
+          {candidatos.length === 0 && <p className="muted">{t("recruit.ningun_candidato")}</p>}
           {candidatos.map((c) => (
             <div className="candidate" key={c.persona_id}>
               <div className="flex-between">
                 <strong>{c.nombre}</strong>
                 <div style={{ whiteSpace: "nowrap" }}>
                   <button className="chip" onClick={() => cambiar(c.persona_id)} disabled={replacingId === c.persona_id}>
-                    {replacingId === c.persona_id ? "…" : "Cambiar"}
+                    {replacingId === c.persona_id ? "…" : t("recruit.btn_cambiar")}
                   </button>{" "}
-                  <button className="chip" onClick={() => quitar(c.persona_id)}>Quitar</button>
+                  <button className="chip" onClick={() => quitar(c.persona_id)}>{t("recruit.btn_quitar")}</button>
                 </div>
               </div>
               <div className="muted" style={{ fontSize: "0.78rem" }}>
-                {c.edad ?? "—"} años · vive en {c.pais_residencia ?? "—"}
-                {c.pais_origen && c.pais_origen !== c.pais_residencia ? ` (origen: ${c.pais_origen})` : ""} · {c.ocupacion ?? "—"}
+                {c.edad ?? "—"} {t("common.edad_anos")} · {t("generar.vive_en")} {c.pais_residencia ?? "—"}
+                {c.pais_origen && c.pais_origen !== c.pais_residencia ? ` (${t("generar.origen_short")}: ${c.pais_origen})` : ""} · {c.ocupacion ?? "—"}
               </div>
               {c.motivo && <div style={{ fontSize: "0.8rem", marginTop: 3 }} className="muted">{c.motivo}</div>}
             </div>
           ))}
           <button style={{ marginTop: 8 }} onClick={confirmar}
             disabled={confirming || candidatos.length === 0}>
-            {confirming ? "Confirmando…" : `Confirmar ${candidatos.length} participantes`}
+            {confirming ? t("recruit.btn_confirmando") : t("recruit.btn_confirmar", { n: String(candidatos.length) })}
           </button>
         </div>
       )}
@@ -271,18 +275,19 @@ function RecruitPanel({
 }
 
 function PersonaPopover({ p }: { p: Persona }) {
+  const { t } = useLocale();
   const sd = p.sociodemografico ?? {};
   const op = p.opinion ?? {};
   return (
     <div className="chip-pop">
       <strong>{p.nombre}</strong>
       <div className="muted" style={{ fontSize: "0.72rem", marginTop: 2 }}>
-        {sd.edad ?? "—"} años · {sd.ocupacion ?? "—"}
+        {sd.edad ?? "—"} {t("common.edad_anos")} · {sd.ocupacion ?? "—"}
       </div>
       <div className="muted" style={{ fontSize: "0.72rem" }}>
-        vive en {sd.pais_residencia ?? "—"}
-        {sd.codigo_postal ? ` (CP ${sd.codigo_postal})` : ""}
-        {sd.pais_origen && sd.pais_origen !== sd.pais_residencia ? ` · origen: ${sd.pais_origen}` : ""}
+        {t("generar.vive_en")} {sd.pais_residencia ?? "—"}
+        {sd.codigo_postal ? ` (${t("common.cp_prefix")} ${sd.codigo_postal})` : ""}
+        {sd.pais_origen && sd.pais_origen !== sd.pais_residencia ? ` · ${t("generar.origen_short")}: ${sd.pais_origen}` : ""}
         {sd.nivel_educativo ? ` · ${sd.nivel_educativo}` : ""}
       </div>
       {p.bio && <p style={{ margin: "7px 0 0", fontSize: "0.78rem", lineHeight: 1.45 }}>{p.bio}</p>}
@@ -317,6 +322,7 @@ function FocusGroupDetail({ id, onBack }: { id: number; onBack: () => void }) {
   const pollRef = useRef<number | null>(null);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
   const questionRefs = useRef<Record<number, HTMLDivElement | null>>({});
+  const { t } = useLocale();
   const chatRef = useRef<ChatItem[]>([]);
   chatRef.current = chat;
 
@@ -366,7 +372,7 @@ function FocusGroupDetail({ id, onBack }: { id: number; onBack: () => void }) {
   // primera respuesta incompleta (en orden cronológico); las siguientes esperan
   // su turno. Así se ve como una conversación encadenada, no en simultáneo.
   useEffect(() => {
-    const t = window.setInterval(() => {
+    const revealTimer = window.setInterval(() => {
       setRevealed((prev) => {
         for (const it of chatRef.current) {
           for (const r of it.responses) {
@@ -380,7 +386,7 @@ function FocusGroupDetail({ id, onBack }: { id: number; onBack: () => void }) {
         return prev; // todo revelado
       });
     }, 45);
-    return () => window.clearInterval(t);
+    return () => window.clearInterval(revealTimer);
   }, []);
 
   // Restablece el estado de "interrumpiendo" cuando deja de generar
@@ -403,7 +409,7 @@ function FocusGroupDetail({ id, onBack }: { id: number; onBack: () => void }) {
   };
 
   if (!fg) return (
-    <div className="loading-center"><span className="spinner blink">Cargando…</span></div>
+    <div className="loading-center"><span className="spinner blink">{t("chat.cargando")}</span></div>
   );
 
   const memberIdSet = new Set(memberIds);
@@ -457,7 +463,7 @@ function FocusGroupDetail({ id, onBack }: { id: number; onBack: () => void }) {
   };
 
   const discardReport = async () => {
-    if (!confirm("¿Descartar el informe? La conversación del chat se conserva.")) return;
+    if (!confirm(t("informe.confirmar_descartar"))) return;
     try {
       await api.deleteReport(id);
       setReport(null);
@@ -466,7 +472,7 @@ function FocusGroupDetail({ id, onBack }: { id: number; onBack: () => void }) {
 
   const destLabel =
     destinatarios.length === 0
-      ? "Todos"
+      ? t("chat.todos")
       : destinatarios.map(nombreDe).join(", ");
 
   return (
@@ -474,12 +480,12 @@ function FocusGroupDetail({ id, onBack }: { id: number; onBack: () => void }) {
       <div className="toolbar" style={{ position: "relative", alignItems: "center" }}>
         <button className="secondary" onClick={onBack}
           style={{ position: "absolute", left: "-7.5rem", top: "50%", transform: "translateY(-50%)" }}>
-          ← Volver
+          {t("focus.btn_volver")}
         </button>
         <h2 style={{ margin: 0, fontWeight: 400, fontSize: "2.6rem" }}>{fg.nombre}</h2>
         <div style={{ flex: 1 }} />
         <button onClick={generateReport} disabled={estado === "running" || genReport || chat.length === 0}>
-          {genReport ? "Generando…" : "Generar informe"}
+          {genReport ? t("focus.btn_generando_informe") : t("focus.btn_generar_informe")}
         </button>
       </div>
 
@@ -497,9 +503,9 @@ function FocusGroupDetail({ id, onBack }: { id: number; onBack: () => void }) {
 
           <details className="card">
             <summary style={{ cursor: "pointer", fontWeight: 600 }}>
-              Ajuste manual ({memberIds.length})
+              {t("ajuste.titulo", { n: String(memberIds.length) })}
             </summary>
-            <p className="muted">Marca o desmarca personas de la biblioteca.</p>
+            <p className="muted">{t("ajuste.desc")}</p>
             <div style={{ maxHeight: 300, overflowY: "auto" }}>
               {personas.map((p) => (
                 <label key={p.id} style={{ display: "flex", gap: 8, alignItems: "center", color: "var(--text)" }}>
@@ -512,7 +518,7 @@ function FocusGroupDetail({ id, onBack }: { id: number; onBack: () => void }) {
           </details>
         </div>
         {leftCollapsed && (
-          <button className="panel-expand" title="Mostrar panel de participantes"
+          <button className="panel-expand" title={t("focus.panel_expand_title")}
             onClick={() => setLeftCollapsed(false)}>›</button>
         )}
 
@@ -521,7 +527,7 @@ function FocusGroupDetail({ id, onBack }: { id: number; onBack: () => void }) {
           <div className="card chat-card">
             <div className="chat-thread">
               {chat.length === 0 && (
-                <p className="muted">Escribe la primera pregunta del moderador para empezar el focus group.</p>
+                <p className="muted">{t("chat.primera_pregunta")}</p>
               )}
               {chat.map((item, i) => (
                 <div key={i} ref={(el) => { questionRefs.current[i] = el; }} style={{ scrollMarginTop: 8 }}>
@@ -529,7 +535,7 @@ function FocusGroupDetail({ id, onBack }: { id: number; onBack: () => void }) {
                     <div className="msg-bubble">
                       {item.pregunta}
                       <div className="msg-dest">
-                        → {item.destinatarios.length === 0 ? "Todos" : item.destinatarios.map(nombreDe).join(", ")}
+                        → {item.destinatarios.length === 0 ? t("chat.dest_todos") : item.destinatarios.map(nombreDe).join(", ")}
                       </div>
                     </div>
                   </div>
@@ -548,19 +554,19 @@ function FocusGroupDetail({ id, onBack }: { id: number; onBack: () => void }) {
                   })}
                 </div>
               ))}
-              {estado === "running" && <p className="spinner">Las personas están escribiendo…</p>}
+              {estado === "running" && <p className="spinner">{t("chat.escribiendo")}</p>}
               <div ref={chatEndRef} />
             </div>
 
             {/* Composer */}
             <div className="composer">
               <div className="dest-chips">
-                <span className="muted" style={{ marginRight: 6 }}>Dirigir a:</span>
+                <span className="muted" style={{ marginRight: 6 }}>{t("chat.dirigir_a")}</span>
                 <button
                   className={destinatarios.length === 0 ? "chip active" : "chip"}
                   onClick={() => setDestinatarios([])}
                   type="button"
-                >Todos</button>
+                >{t("chat.todos")}</button>
                 {memberIds.map((pid) => {
                   const p = personas.find((x) => x.id === pid);
                   return (
@@ -578,7 +584,7 @@ function FocusGroupDetail({ id, onBack }: { id: number; onBack: () => void }) {
               <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
                 <textarea
                   rows={2}
-                  placeholder={memberIds.length === 0 ? "Añade participantes primero…" : `Pregunta del moderador (a: ${destLabel})`}
+                  placeholder={memberIds.length === 0 ? t("chat.placeholder_sin_miembros") : t("chat.placeholder_con_miembros", { dest: destLabel })}
                   value={texto}
                   disabled={memberIds.length === 0 || estado === "running"}
                   onChange={(e) => setTexto(e.target.value)}
@@ -591,27 +597,27 @@ function FocusGroupDetail({ id, onBack }: { id: number; onBack: () => void }) {
                 />
                 {estado === "running" ? (
                   <button className="danger" onClick={interrumpir} disabled={cancelling}>
-                    {cancelling ? "Interrumpiendo…" : "Interrumpir"}
+                    {cancelling ? t("chat.btn_interrumpiendo") : t("chat.btn_interrumpir")}
                   </button>
                 ) : (
                   <button onClick={enviar} disabled={memberIds.length === 0 || !texto.trim()}>
-                    Enviar
+                    {t("chat.btn_enviar")}
                   </button>
                 )}
               </div>
-              <p className="muted" style={{ margin: "4px 0 0" }}>Enter para enviar · Shift + Enter para nueva línea</p>
+              <p className="muted" style={{ margin: "4px 0 0" }}>{t("chat.enter_hint")}</p>
             </div>
           </div>
 
           {report && (
             <div className="card">
               <div className="flex-between">
-                <h3>Informe</h3>
+                <h3>{t("informe.titulo")}</h3>
                 <div className="row" style={{ flex: "0 0 auto" }}>
-                  <a href={api.exportUrl(id, "pdf")}><button className="secondary">PDF</button></a>{" "}
-                  <a href={api.exportUrl(id, "docx")}><button className="secondary">Word</button></a>{" "}
-                  <a href={api.exportUrl(id, "xlsx")}><button className="secondary">Excel</button></a>{" "}
-                  <button className="danger" onClick={discardReport}>Cerrar</button>
+                  <a href={api.exportUrl(id, "pdf")}><button className="secondary">{t("informe.btn_pdf")}</button></a>{" "}
+                  <a href={api.exportUrl(id, "docx")}><button className="secondary">{t("informe.btn_word")}</button></a>{" "}
+                  <a href={api.exportUrl(id, "xlsx")}><button className="secondary">{t("informe.btn_excel")}</button></a>{" "}
+                  <button className="danger" onClick={discardReport}>{t("informe.btn_cerrar")}</button>
                 </div>
               </div>
               <div className="report"><Markdown>{report.contenido_markdown}</Markdown></div>
@@ -622,8 +628,8 @@ function FocusGroupDetail({ id, onBack }: { id: number; onBack: () => void }) {
         {/* Navegador de preguntas del moderador */}
         <div style={{ flex: "1 1 200px", maxWidth: 280 }}>
           <div className="card qnav">
-            <h3>Preguntas</h3>
-            {chat.length === 0 && <p className="muted">Aún no hay preguntas.</p>}
+            <h3>{t("qnav.titulo")}</h3>
+            {chat.length === 0 && <p className="muted">{t("qnav.sin_preguntas")}</p>}
             {chat.map((item, i) => (
               <button key={i} className="qnav-item" title={item.pregunta}
                 onClick={() => scrollToQuestion(i)}>

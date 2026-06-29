@@ -2,21 +2,27 @@ import { useEffect, useRef, useState } from "react";
 import { api, ConditionRule, Persona, QuestionIn, Survey, SurveyImportDraft, SurveyResults } from "../api/client";
 import { useCountry } from "../CountryContext";
 import { getCountry, Band } from "../countries";
+import { useLocale } from "../locales/index";
+import type { TranslationKey } from "../locales/en";
 
 // ─── Constantes compartidas ───────────────────────────────────────────────────
 
-const Q_TYPES = [
-  { v: "single",   label: "Opción única" },
-  { v: "multiple", label: "Opción múltiple" },
-  { v: "yesno",    label: "Sí / No" },
-  { v: "likert",   label: "Escala 1–5" },
-  { v: "nps",      label: "NPS 0–10" },
-  { v: "abierta",  label: "Pregunta abierta" },
+const Q_TYPES: { v: string; labelKey: TranslationKey }[] = [
+  { v: "single",   labelKey: "qtype.single" },
+  { v: "multiple", labelKey: "qtype.multiple" },
+  { v: "yesno",    labelKey: "qtype.yesno" },
+  { v: "likert",   labelKey: "qtype.likert" },
+  { v: "nps",      labelKey: "qtype.nps" },
+  { v: "abierta",  labelKey: "qtype.abierta" },
 ];
 const NEEDS_OPTIONS = new Set(["single", "multiple"]);
-const BREAKS = [
-  { v: "", label: "Sin cruce" }, { v: "genero", label: "Sexo" }, { v: "edad", label: "Edad" },
-  { v: "region", label: "Región" }, { v: "ingresos", label: "Ingresos" }, { v: "educacion", label: "Educación" },
+const BREAK_VARS: { v: string; labelKey: TranslationKey }[] = [
+  { v: "",          labelKey: "break.ninguno" },
+  { v: "genero",    labelKey: "break.genero" },
+  { v: "edad",      labelKey: "break.edad" },
+  { v: "region",    labelKey: "break.region" },
+  { v: "ingresos",  labelKey: "break.ingresos" },
+  { v: "educacion", labelKey: "break.educacion" },
 ];
 
 type EditQ = QuestionIn & { opcText?: string; condiciones: ConditionRule[] };
@@ -63,6 +69,7 @@ function quotaSample(personas: Persona[], N: number, bands: Band[]): number[] {
 
 export default function SurveysPage() {
   const { pais, country } = useCountry();
+  const { t } = useLocale();
   const [surveys, setSurveys] = useState<Survey[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [creating, setCreating] = useState(false);
@@ -75,16 +82,16 @@ export default function SurveysPage() {
   return (
     <div className="w80">
       <div className="toolbar">
-        <h2 style={{ margin: 0, fontWeight: 400, fontSize: "2.6rem" }}>Encuestas</h2>
+        <h2 style={{ margin: 0, fontWeight: 400, fontSize: "2.6rem" }}>{t("surveys.titulo")}</h2>
         <div style={{ flex: 1 }} />
-        <button onClick={() => setCreating(true)}>+ Nueva encuesta</button>
+        <button onClick={() => setCreating(true)}>{t("surveys.nueva_btn")}</button>
       </div>
       <p className="muted" style={{ marginTop: "-0.5rem" }}>
-        Encuestas cuantitativas sobre la población sintética. Resultados simulados por IA: exploran hipótesis, no sustituyen una encuesta real.
+        {t("surveys.subtitulo")}
       </p>
       <div className="card table-card">
         <table>
-          <thead><tr><th>Nombre</th><th>Tema</th><th>País</th><th>Estado</th><th></th></tr></thead>
+          <thead><tr><th>{t("surveys.tabla_nombre")}</th><th>{t("surveys.tabla_tema")}</th><th>{t("surveys.tabla_pais")}</th><th>{t("surveys.tabla_estado")}</th><th></th></tr></thead>
           <tbody>
             {visibles.map((s) => (
               <tr key={s.id}>
@@ -93,16 +100,16 @@ export default function SurveysPage() {
                 <td>{getCountry(s.pais).nombre}</td>
                 <td>{s.estado}</td>
                 <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                  <button className="secondary" onClick={() => setSelectedId(s.id)}>Abrir</button>{" "}
+                  <button className="secondary" onClick={() => setSelectedId(s.id)}>{t("surveys.btn_abrir")}</button>{" "}
                   <button className="danger" onClick={async () => {
-                    if (!confirm(`¿Borrar la encuesta "${s.nombre}"?`)) return;
+                    if (!confirm(t("surveys.confirmar_borrar", { name: s.nombre }))) return;
                     setSurveys((prev) => prev.filter((x) => x.id !== s.id));
                     await api.deleteSurvey(s.id).catch(() => load());
-                  }}>Borrar</button>
+                  }}>{t("surveys.btn_borrar")}</button>
                 </td>
               </tr>
             ))}
-            {visibles.length === 0 && <tr><td colSpan={5} className="muted">Aún no hay encuestas en {country.nombre}.</td></tr>}
+            {visibles.length === 0 && <tr><td colSpan={5} className="muted">{t("surveys.no_hay", { country: country.nombre })}</td></tr>}
           </tbody>
         </table>
       </div>
@@ -114,17 +121,18 @@ export default function SurveysPage() {
 
 function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (id: number) => void }) {
   const { pais, country } = useCountry();
+  const { t } = useLocale();
   const [f, setF] = useState({ nombre: "", tema: "", idioma: "es", pais });
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h2>Nueva encuesta</h2>
-        <div><label>Nombre</label><input value={f.nombre} onChange={(e) => setF({ ...f, nombre: e.target.value })} /></div>
-        <div><label>Tema</label><input value={f.tema} onChange={(e) => setF({ ...f, tema: e.target.value })} /></div>
-        <div><label>País</label><input value={country.nombre} disabled /></div>
+        <h2>{t("surveys.crear_titulo")}</h2>
+        <div><label>{t("surveys.crear_nombre")}</label><input value={f.nombre} onChange={(e) => setF({ ...f, nombre: e.target.value })} /></div>
+        <div><label>{t("surveys.crear_tema")}</label><input value={f.tema} onChange={(e) => setF({ ...f, tema: e.target.value })} /></div>
+        <div><label>{t("surveys.crear_pais")}</label><input value={country.nombre} disabled /></div>
         <div className="flex-between" style={{ marginTop: "1rem" }}>
-          <button className="secondary" onClick={onClose}>Cancelar</button>
-          <button disabled={!f.nombre} onClick={async () => onCreated((await api.createSurvey(f)).id)}>Crear</button>
+          <button className="secondary" onClick={onClose}>{t("common.cancelar")}</button>
+          <button disabled={!f.nombre} onClick={async () => onCreated((await api.createSurvey(f)).id)}>{t("surveys.crear_btn")}</button>
         </div>
       </div>
     </div>
@@ -134,6 +142,7 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
 // ─── Vista de detalle de encuesta ─────────────────────────────────────────────
 
 function SurveyDetail({ id, onBack }: { id: number; onBack: () => void }) {
+  const { t } = useLocale();
   const [survey, setSurvey] = useState<Survey | null>(null);
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [questions, setQuestions] = useState<EditQ[]>([]);
@@ -201,7 +210,7 @@ function SurveyDetail({ id, onBack }: { id: number; onBack: () => void }) {
   const loadResults = (bv: string) => api.surveyResults(id, bv).then(setResults).catch(() => {});
 
   const cancel = async () => {
-    if (!window.confirm("¿Cancelar la encuesta en curso? Quedará en estado borrador.")) return;
+    if (!window.confirm(t("run.confirmar_cancelar"))) return;
     try { await api.cancelSurvey(id); } catch { /* ignorar */ }
     if (pollRef.current) { window.clearInterval(pollRef.current); pollRef.current = null; }
     setEstado("draft"); setProgress(null); setResults(null);
@@ -210,7 +219,7 @@ function SurveyDetail({ id, onBack }: { id: number; onBack: () => void }) {
   const launch = async () => {
     await saveQuestions();
     const ids = sampleIds();
-    if (!ids.length) { alert("La muestra está vacía."); return; }
+    if (!ids.length) { alert(t("run.muestra_vacia")); return; }
     setEstado("running"); setProgress({ done: 0, total: ids.length }); setResults(null);
     setTab("run");
     try {
@@ -228,14 +237,14 @@ function SurveyDetail({ id, onBack }: { id: number; onBack: () => void }) {
     } catch (e) { alert("Error: " + (e as Error).message); setEstado("draft"); }
   };
 
-  if (!survey) return <div className="loading-center"><span className="spinner blink">Cargando…</span></div>;
+  if (!survey) return <div className="loading-center"><span className="spinner blink">{t("surveys.cargando")}</span></div>;
 
   return (
     <div className="w80">
       {/* Barra de título */}
       <div className="toolbar" style={{ position: "relative", alignItems: "center" }}>
         <button className="secondary" onClick={onBack}
-          style={{ position: "absolute", left: "-7.5rem", top: "50%", transform: "translateY(-50%)" }}>← Volver</button>
+          style={{ position: "absolute", left: "-7.5rem", top: "50%", transform: "translateY(-50%)" }}>{t("surveys.btn_volver")}</button>
         <div>
           <h2 style={{ margin: 0, fontWeight: 400, fontSize: "2.2rem" }}>{survey.nombre}</h2>
           {survey.tema && <p className="muted" style={{ margin: "2px 0 0" }}>{survey.tema}</p>}
@@ -246,10 +255,10 @@ function SurveyDetail({ id, onBack }: { id: number; onBack: () => void }) {
       {/* Tabs */}
       <div className="survey-tabs">
         <button className={`survey-tab${tab === "design" ? " active" : ""}`} onClick={() => setTab("design")}>
-          ◈ Diseño
+          {t("surveys.tab_diseno")}
         </button>
         <button className={`survey-tab${tab === "run" ? " active" : ""}`} onClick={() => setTab("run")}>
-          ▶ Ejecución
+          {t("surveys.tab_ejecucion")}
           {estado === "running" && <span className="blink" style={{ marginLeft: 6, color: "var(--accent-blue)" }}>●</span>}
         </button>
       </div>
@@ -307,6 +316,7 @@ function DesignTab({ survey, setSurvey, questions, setQuestions, saving, onSave 
   saving: boolean;
   onSave: (qs?: EditQ[]) => Promise<void>;
 }) {
+  const { t } = useLocale();
   const [importOpen, setImportOpen] = useState(false);
   const [editIdx, setEditIdx] = useState<number | null>(null);
   const [insertAfter, setInsertAfter] = useState<number | null>(null);
@@ -338,7 +348,7 @@ function DesignTab({ survey, setSurvey, questions, setQuestions, saving, onSave 
 
   const AddBtn = ({ after }: { after: number | null }) => (
     <div className="sq-add-row">
-      <button className="sq-add-btn" onClick={() => openInsert(after)}>+ Añadir pregunta</button>
+      <button className="sq-add-btn" onClick={() => openInsert(after)}>{t("design.anadir_pregunta")}</button>
     </div>
   );
 
@@ -347,24 +357,24 @@ function DesignTab({ survey, setSurvey, questions, setQuestions, saving, onSave 
       {/* Toolbar */}
       <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.25rem", flexWrap: "wrap" }}>
         <button className="secondary" onClick={() => {
-          if (questions.length > 0 && !confirm("¿Importar? Se reemplazarán las preguntas actuales.")) return;
+          if (questions.length > 0 && !confirm(t("design.confirmar_importar"))) return;
           setImportOpen(true);
-        }}>↑ Importar PDF/Word</button>
+        }}>{t("design.importar_btn")}</button>
         <a href={api.surveyExportDocxUrl(survey.id)}
            download={`${survey.nombre.replace(/[^a-z0-9]/gi, "_")}.docx`}>
-          <button className="secondary">↓ Word (.docx)</button>
+          <button className="secondary">{t("design.docx_btn")}</button>
         </a>
         <div style={{ flex: 1 }} />
         <button onClick={() => onSave()} disabled={saving}>
-          {saving ? "Guardando…" : "Guardar"}
+          {saving ? t("design.guardando_btn") : t("design.guardar_btn")}
         </button>
       </div>
 
       {/* Tarjeta de bienvenida */}
       <div className="sq-intro-card" onClick={() => setEditIntro(true)}>
-        <div className="sq-intro-label">✦ Bienvenida / Introducción</div>
+        <div className="sq-intro-label">{t("design.bienvenida_label")}</div>
         <div className={survey.descripcion ? "sq-intro-text" : "sq-intro-placeholder"}>
-          {survey.descripcion || "Clic para añadir un texto de bienvenida al entrevistado…"}
+          {survey.descripcion || t("design.bienvenida_placeholder")}
         </div>
       </div>
 
@@ -372,7 +382,8 @@ function DesignTab({ survey, setSurvey, questions, setQuestions, saving, onSave 
 
       {/* Lista de tarjetas de preguntas */}
       {questions.map((q, i) => {
-        const typeLbl = Q_TYPES.find(t => t.v === q.tipo)?.label ?? q.tipo;
+        const qtType = Q_TYPES.find((qt) => qt.v === q.tipo);
+        const typeLbl = qtType ? t(qtType.labelKey) : q.tipo;
         const opts = q.tipo === "yesno" ? ["Sí", "No"] :
                      q.tipo === "likert" ? ["1", "2", "3", "4", "5"] :
                      q.tipo === "nps" ? ["0 → 10"] :
@@ -385,19 +396,19 @@ function DesignTab({ survey, setSurvey, questions, setQuestions, saving, onSave 
               onDragStart={() => onDragStart(i)}
               onDragOver={(e) => onDragOver(e, i)}
               onDragEnd={onDragEnd}>
-              <div className="sq-card-drag" title="Arrastra para reordenar">⠿</div>
+              <div className="sq-card-drag" title={t("design.arrastra")}>⠿</div>
               <div className="sq-card-main">
                 <div className="sq-card-meta">
                   <span className="sq-card-num">P{i + 1}</span>
                   <span className="sq-card-type">{typeLbl}</span>
-                  {skips.length > 0 && <span className="sq-card-logic">⤵ Lógica condicional</span>}
+                  {skips.length > 0 && <span className="sq-card-logic">{t("design.logica")}</span>}
                   {q.obligatoria && <span className="sq-card-req">*</span>}
                 </div>
                 <div className="sq-card-text">
-                  {q.texto || <span style={{ opacity: 0.4, fontStyle: "italic" }}>Sin texto</span>}
+                  {q.texto || <span style={{ opacity: 0.4, fontStyle: "italic" }}>{t("design.sin_texto")}</span>}
                 </div>
                 {q.tipo === "abierta" ? (
-                  <div className="sq-card-open">Respuesta de texto libre</div>
+                  <div className="sq-card-open">{t("design.respuesta_libre")}</div>
                 ) : opts.length > 0 ? (
                   <div className="sq-card-opts">
                     {opts.slice(0, 5).map((o, oi) => (
@@ -405,23 +416,23 @@ function DesignTab({ survey, setSurvey, questions, setQuestions, saving, onSave 
                         {q.tipo === "multiple" ? "☐" : "○"} {o}
                       </span>
                     ))}
-                    {opts.length > 5 && <span className="sq-card-opt muted">+{opts.length - 5} más…</span>}
+                    {opts.length > 5 && <span className="sq-card-opt muted">{t("design.mas_opciones", { n: String(opts.length - 5) })}</span>}
                   </div>
                 ) : null}
                 {skips.map((c, ci) => (
                   <div key={ci} className="sq-card-skip">
-                    ↳ Si responde <strong>"{c.si_respuesta}"</strong>
-                    {" → "}{c.ir_a_orden != null ? `ir a P${c.ir_a_orden + 1}` : "Fin de encuesta"}
+                    ↳ {t("design.si_responde_card")} <strong>"{c.si_respuesta}"</strong>
+                    {" → "}{c.ir_a_orden != null ? `${t("design.ir_a_card")} P${c.ir_a_orden + 1}` : t("design.fin_encuesta_card")}
                   </div>
                 ))}
               </div>
               <div className="sq-card-actions">
-                <button className="secondary" onClick={() => openEdit(i)}>Editar</button>
+                <button className="secondary" onClick={() => openEdit(i)}>{t("design.btn_editar")}</button>
                 <button className="danger" onClick={() => {
-                  if (!confirm("¿Eliminar esta pregunta?")) return;
+                  if (!confirm(t("design.confirmar_eliminar"))) return;
                   const updated = questions.filter((_, j) => j !== i);
                   setQuestions(updated); onSave(updated);
-                }}>✕</button>
+                }}>{t("design.btn_eliminar")}</button>
               </div>
             </div>
             <AddBtn after={i} />
@@ -431,8 +442,8 @@ function DesignTab({ survey, setSurvey, questions, setQuestions, saving, onSave 
 
       {questions.length === 0 && (
         <div style={{ textAlign: "center", padding: "3rem 1rem", color: "var(--muted)" }}>
-          <p style={{ marginBottom: "1rem" }}>Aún no hay preguntas. ¡Empieza aquí!</p>
-          <button onClick={() => openInsert(null)}>+ Añadir primera pregunta</button>
+          <p style={{ marginBottom: "1rem" }}>{t("design.no_preguntas")}</p>
+          <button onClick={() => openInsert(null)}>{t("design.primera_pregunta")}</button>
         </div>
       )}
 
@@ -475,6 +486,7 @@ function NodeEditModal({ questions, editIdx, insertAfter, onClose, onSave }: {
   onClose: () => void;
   onSave: (updated: EditQ[]) => Promise<void>;
 }) {
+  const { t } = useLocale();
   const isNew = editIdx === null;
   const initial: EditQ = isNew
     ? { texto: "", tipo: "single", opciones: [], obligatoria: true, opcText: "", condiciones: [] }
@@ -488,7 +500,7 @@ function NodeEditModal({ questions, editIdx, insertAfter, onClose, onSave }: {
   const hasConds = NEEDS_OPTIONS.has(q.tipo) || q.tipo === "yesno";
 
   const save = async () => {
-    if (!q.texto.trim()) { alert("El texto de la pregunta no puede estar vacío."); return; }
+    if (!q.texto.trim()) { alert(t("modal_q.texto_vacio")); return; }
     setSaving(true);
     let updated: EditQ[];
     if (isNew) {
@@ -502,52 +514,54 @@ function NodeEditModal({ questions, editIdx, insertAfter, onClose, onSave }: {
   };
 
   const del = async () => {
-    if (!confirm("¿Eliminar esta pregunta?")) return;
+    if (!confirm(t("design.confirmar_eliminar"))) return;
     setSaving(true);
     await onSave(questions.filter((_, i) => i !== editIdx));
     setSaving(false);
   };
 
+  const title = isNew
+    ? (insertAfter !== null ? t("modal_q.titulo_nueva_despues", { n: String(insertAfter + 1) }) : t("modal_q.titulo_nueva"))
+    : t("modal_q.titulo_editar", { n: String(editIdx! + 1) });
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" style={{ maxWidth: 520 }} onClick={(e) => e.stopPropagation()}>
-        <h2 style={{ marginTop: 0 }}>
-          {isNew ? `Nueva pregunta${insertAfter !== null ? ` (después de P${insertAfter + 1})` : ""}` : `Editar P${editIdx! + 1}`}
-        </h2>
+        <h2 style={{ marginTop: 0 }}>{title}</h2>
 
-        <div><label>Texto</label>
+        <div><label>{t("modal_q.texto_label")}</label>
           <textarea rows={3} value={q.texto} onChange={(e) => setQ({ ...q, texto: e.target.value })}
-            placeholder="Texto de la pregunta" /></div>
+            placeholder={t("modal_q.texto_placeholder")} /></div>
 
         <div className="row" style={{ marginTop: "0.6rem" }}>
-          <div style={{ flex: 2 }}><label>Tipo</label>
+          <div style={{ flex: 2 }}><label>{t("modal_q.tipo_label")}</label>
             <select value={q.tipo} onChange={(e) => setQ({ ...q, tipo: e.target.value, condiciones: [] })}>
-              {Q_TYPES.map((t) => <option key={t.v} value={t.v}>{t.label}</option>)}
+              {Q_TYPES.map((qt) => <option key={qt.v} value={qt.v}>{t(qt.labelKey)}</option>)}
             </select></div>
         </div>
 
         {NEEDS_OPTIONS.has(q.tipo) && (
-          <div style={{ marginTop: "0.6rem" }}><label>Opciones (separadas por coma)</label>
+          <div style={{ marginTop: "0.6rem" }}><label>{t("modal_q.opciones_label")}</label>
             <input value={q.opcText ?? q.opciones.join(", ")}
               onChange={(e) => setQ({ ...q, opcText: e.target.value })}
-              placeholder="Ej. Totalmente de acuerdo, De acuerdo, En desacuerdo" /></div>
+              placeholder={t("modal_q.opciones_placeholder")} /></div>
         )}
 
         {/* Saltos condicionales */}
         {hasConds && (
           <div style={{ marginTop: "0.75rem", paddingLeft: 10, borderLeft: "2px solid var(--border)" }}>
-            <label style={{ display: "block", marginBottom: 6 }}>Saltos condicionales</label>
+            <label style={{ display: "block", marginBottom: 6 }}>{t("modal_q.saltos_label")}</label>
             {(q.condiciones ?? []).map((rule, ri) => (
               <div key={ri} className="row" style={{ gap: "0.4rem", marginBottom: 6, alignItems: "center" }}>
-                <span className="muted" style={{ fontSize: "0.8rem", whiteSpace: "nowrap" }}>Si responde</span>
+                <span className="muted" style={{ fontSize: "0.8rem", whiteSpace: "nowrap" }}>{t("modal_q.si_responde")}</span>
                 <select style={{ flex: 1 }} value={rule.si_respuesta}
                   onChange={(e) => { const c = [...q.condiciones]; c[ri] = { ...c[ri], si_respuesta: e.target.value }; setQ({ ...q, condiciones: c }); }}>
                   {opts.map((o) => <option key={o} value={o}>{o}</option>)}
                 </select>
-                <span className="muted" style={{ fontSize: "0.8rem", whiteSpace: "nowrap" }}>→ ir a</span>
+                <span className="muted" style={{ fontSize: "0.8rem", whiteSpace: "nowrap" }}>{t("modal_q.ir_a")}</span>
                 <select style={{ flex: 1 }} value={rule.ir_a_orden ?? "fin"}
                   onChange={(e) => { const c = [...q.condiciones]; c[ri] = { ...c[ri], ir_a_orden: e.target.value === "fin" ? null : +e.target.value }; setQ({ ...q, condiciones: c }); }}>
-                  <option value="fin">Fin de encuesta</option>
+                  <option value="fin">{t("modal_q.fin_encuesta")}</option>
                   {questions.map((_, j) => {
                     const myIdx = isNew ? (insertAfter !== null ? insertAfter + 1 : 0) : editIdx!;
                     return j > myIdx ? <option key={j} value={j}>P{j + 1}</option> : null;
@@ -559,18 +573,18 @@ function NodeEditModal({ questions, editIdx, insertAfter, onClose, onSave }: {
             ))}
             <button className="secondary" style={{ fontSize: "0.8rem" }}
               onClick={() => setQ({ ...q, condiciones: [...q.condiciones, { si_respuesta: opts[0] ?? "Sí", ir_a_orden: null }] })}>
-              + Añadir salto
+              {t("modal_q.anadir_salto")}
             </button>
           </div>
         )}
 
         <div className="flex-between" style={{ marginTop: "1.25rem" }}>
           <div>
-            {!isNew && <button className="danger" onClick={del} disabled={saving}>Eliminar</button>}
+            {!isNew && <button className="danger" onClick={del} disabled={saving}>{t("modal_q.btn_eliminar")}</button>}
           </div>
           <div style={{ display: "flex", gap: "0.5rem" }}>
-            <button className="secondary" onClick={onClose}>Cancelar</button>
-            <button onClick={save} disabled={saving}>{saving ? "Guardando…" : "Guardar"}</button>
+            <button className="secondary" onClick={onClose}>{t("modal_q.btn_cancelar")}</button>
+            <button onClick={save} disabled={saving}>{saving ? t("modal_q.btn_guardando") : t("modal_q.btn_guardar")}</button>
           </div>
         </div>
       </div>
@@ -592,62 +606,65 @@ function RunTab({ survey, surveyId, estado, progress, results, breakVar, setBrea
   previewN: number; regions: string[]; country: any;
   onLaunch: () => void; onCancel: () => void; questionsEmpty: boolean;
 }) {
+  const { t } = useLocale();
   return (
     <div style={{ display: "flex", gap: "1rem", alignItems: "flex-start", flexWrap: "wrap" }}>
       {/* Configuración de muestra */}
       <div style={{ flex: "0 0 320px" }}>
         <div className="card">
-          <h3>Muestra</h3>
-          <div><label>Método</label>
+          <h3>{t("run.muestra_titulo")}</h3>
+          <div><label>{t("run.metodo_label")}</label>
             <select value={method} onChange={(e) => setMethod(e.target.value)}>
-              <option value="representativa">Representativa (cuotas edad×sexo, {country.fuenteDemografica})</option>
-              <option value="aleatoria">Aleatoria simple</option>
-              <option value="segmento">Segmento (filtros)</option>
+              <option value="representativa">{t("run.metodo_repr", { fuente: country.fuenteDemografica })}</option>
+              <option value="aleatoria">{t("run.metodo_aleatoria")}</option>
+              <option value="segmento">{t("run.metodo_segmento")}</option>
             </select>
           </div>
           {method === "segmento" && (
             <>
               <div className="row" style={{ marginTop: 6 }}>
-                <div><label>Región</label>
+                <div><label>{t("run.region_label")}</label>
                   <select value={seg.region} onChange={(e) => setSeg({ ...seg, region: e.target.value })}>
-                    <option value="">Todas</option>
+                    <option value="">{t("run.todas_regiones")}</option>
                     {regions.sort().map((r) => <option key={r} value={r}>{r}</option>)}
                   </select></div>
-                <div><label>Sexo</label>
+                <div><label>{t("run.sexo_label")}</label>
                   <select value={seg.genero} onChange={(e) => setSeg({ ...seg, genero: e.target.value })}>
-                    <option value="">Ambos</option><option>Mujer</option><option>Hombre</option>
+                    <option value="">{t("run.ambos")}</option>
+                    <option value="Mujer">{t("run.mujer")}</option>
+                    <option value="Hombre">{t("run.hombre")}</option>
                   </select></div>
               </div>
               <div className="row" style={{ marginTop: 6 }}>
-                <div><label>Edad mín</label><input type="number" value={seg.edadMin} onChange={(e) => setSeg({ ...seg, edadMin: e.target.value })} /></div>
-                <div><label>Edad máx</label><input type="number" value={seg.edadMax} onChange={(e) => setSeg({ ...seg, edadMax: e.target.value })} /></div>
+                <div><label>{t("run.edad_min")}</label><input type="number" value={seg.edadMin} onChange={(e) => setSeg({ ...seg, edadMin: e.target.value })} /></div>
+                <div><label>{t("run.edad_max")}</label><input type="number" value={seg.edadMax} onChange={(e) => setSeg({ ...seg, edadMax: e.target.value })} /></div>
               </div>
             </>
           )}
           <div className="row" style={{ marginTop: 6 }}>
-            <div><label>Tamaño (N)</label>
+            <div><label>{t("run.tamano_n")}</label>
               <input type="number" min={1} max={3000} value={N} onChange={(e) => setN(Math.max(1, +e.target.value || 1))} /></div>
-            <div><label>Modelo IA</label>
+            <div><label>{t("run.modelo_label")}</label>
               <select value={modelo} onChange={(e) => setModelo(e.target.value)}>
-                <option value="gpt-4o">GPT-4o (rápido)</option>
-                <option value="gpt-5.5">GPT-5.5 (razonamiento)</option>
+                <option value="gpt-4o">{t("run.modelo_gpt4o")}</option>
+                <option value="gpt-5.5">{t("run.modelo_gpt55")}</option>
                 <option disabled>──────────</option>
-                <option value="claude-sonnet-4-6">Claude Sonnet 4.6 (≈ GPT-4o)</option>
-                <option value="claude-opus-4-8">Claude Opus 4.8 (mayor calidad)</option>
+                <option value="claude-sonnet-4-6">{t("run.modelo_sonnet")}</option>
+                <option value="claude-opus-4-8">{t("run.modelo_opus")}</option>
               </select></div>
           </div>
-          <p className="muted" style={{ margin: "8px 0" }}>Responderán ~{previewN} personas.</p>
+          <p className="muted" style={{ margin: "8px 0" }}>{t("run.responderas", { n: String(previewN) })}</p>
 
           <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
             <button onClick={onLaunch} disabled={estado === "running" || questionsEmpty}>
-              {estado === "running" ? "Ejecutando…" : "Lanzar encuesta"}
+              {estado === "running" ? t("run.btn_ejecutando") : t("run.btn_lanzar")}
             </button>
-            {estado === "running" && <button className="danger" onClick={onCancel}>Cancelar</button>}
+            {estado === "running" && <button className="danger" onClick={onCancel}>{t("run.btn_cancelar")}</button>}
           </div>
           {estado === "running" && progress && (
             <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginTop: 8 }}>
               <span className="spinner blink" style={{ fontWeight: 500 }}>
-                Ejecutando · {progress.done} / {progress.total}
+                {t("run.progreso", { done: String(progress.done), total: String(progress.total) })}
               </span>
               {progress.total > 0 && <span className="muted" style={{ fontSize: "0.85rem" }}>
                 ({Math.round((progress.done / progress.total) * 100)}%)
@@ -662,33 +679,33 @@ function RunTab({ survey, surveyId, estado, progress, results, breakVar, setBrea
       <div style={{ flex: "1 1 400px" }}>
         <div className="card">
           <div className="flex-between">
-            <h3>Resultados {results ? `(${results.total_respuestas} resp.)` : ""}</h3>
+            <h3>{results ? t("run.resultados_n", { n: String(results.total_respuestas) }) : t("run.resultados_titulo")}</h3>
             <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
               <select value={breakVar} onChange={(e) => setBreakVar(e.target.value)}>
-                {BREAKS.map((b) => <option key={b.v} value={b.v}>Cruce: {b.label}</option>)}
+                {BREAK_VARS.map((b) => <option key={b.v} value={b.v}>{t("run.cruce_label", { label: t(b.labelKey) })}</option>)}
               </select>
               <a href={api.surveyExportUrl(surveyId)}>
-                <button className="secondary" disabled={estado !== "completed"}>↓ Excel</button>
+                <button className="secondary" disabled={estado !== "completed"}>{t("run.btn_excel")}</button>
               </a>
             </div>
           </div>
           {estado === "running" ? (
-            <p className="muted" style={{ padding: "1rem 0" }}>Los resultados se actualizan en tiempo real…</p>
+            <p className="muted" style={{ padding: "1rem 0" }}>{t("run.actualizando")}</p>
           ) : !results ? (
-            <p className="muted">Lanza la encuesta para ver los resultados.</p>
+            <p className="muted">{t("run.lanza_para_ver")}</p>
           ) : null}
           {results?.preguntas.map((q, ri) => (
             <div key={q.question_id} style={{ marginBottom: "1.25rem" }}>
               <p style={{ margin: "0 0 6px", fontWeight: 500 }}>
                 <span style={{ color: "var(--accent-blue)", fontSize: "0.78rem", fontWeight: 600, marginRight: 6 }}>P{ri + 1}</span>
-                {q.texto} <span className="muted" style={{ fontSize: "0.8rem" }}>({q.n} resp.)</span>
-                {q.media != null && <span className="muted"> · media {q.media}</span>}
-                {q.nps != null && <span className="muted"> · NPS {q.nps}</span>}
+                {q.texto} <span className="muted" style={{ fontSize: "0.8rem" }}>({q.n} {t("run.resp_suffix")})</span>
+                {q.media != null && <span className="muted">{t("run.media")}{q.media}</span>}
+                {q.nps != null && <span className="muted">{t("run.nps")}{q.nps}</span>}
               </p>
               {q.tipo === "abierta" ? (
                 <div className="verbatims">
-                  {(q.textos ?? []).map((t, k) => <p className="verbatim" key={k}>"{t}"</p>)}
-                  {(q.textos ?? []).length === 0 && <p className="muted">Sin respuestas.</p>}
+                  {(q.textos ?? []).map((txt, k) => <p className="verbatim" key={k}>"{txt}"</p>)}
+                  {(q.textos ?? []).length === 0 && <p className="muted">{t("run.sin_respuestas")}</p>}
                 </div>
               ) : (
                 <div className="bars">
@@ -705,7 +722,7 @@ function RunTab({ survey, surveyId, estado, progress, results, breakVar, setBrea
                 <div className="table-card" style={{ marginTop: 8 }}>
                   <table>
                     <thead><tr>
-                      <th>{BREAKS.find((b) => b.v === results.break_var)?.label}</th>
+                      <th>{t(BREAK_VARS.find((b) => b.v === results.break_var)?.labelKey ?? "break.ninguno")}</th>
                       {q.distribucion.map((o) => <th key={o.opcion}>{o.opcion}</th>)}
                     </tr></thead>
                     <tbody>
@@ -732,6 +749,7 @@ function IntroModal({ survey, questions, onClose, onSave }: {
   survey: Survey; questions: EditQ[];
   onClose: () => void; onSave: (desc: string) => Promise<void>;
 }) {
+  const { t } = useLocale();
   const [desc, setDesc] = useState(survey.descripcion ?? "");
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -752,28 +770,28 @@ function IntroModal({ survey, questions, onClose, onSave }: {
         const data = await resp.json();
         setDesc(data.texto ?? "");
       } else {
-        alert("No se pudo generar el texto. Inténtalo de nuevo.");
+        alert(t("intro.error_generar"));
       }
-    } catch { alert("Error al contactar con la IA."); }
+    } catch { alert(t("intro.error_ia")); }
     finally { setGenerating(false); }
   };
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" style={{ maxWidth: 520 }} onClick={(e) => e.stopPropagation()}>
-        <h2 style={{ marginTop: 0 }}>Texto de bienvenida</h2>
+        <h2 style={{ marginTop: 0 }}>{t("intro.titulo")}</h2>
         <p className="muted" style={{ marginTop: 0 }}>
-          Se mostrará al entrevistado antes de comenzar. Explica el objetivo, la duración estimada y que es anónima. Sin preguntas ni instrucciones de salto.
+          {t("intro.desc")}
         </p>
         <div style={{ position: "relative" }}>
           <textarea rows={6} value={desc} onChange={(e) => setDesc(e.target.value)}
             style={{ paddingRight: "2.8rem" }}
-            placeholder="Ej: Buenos días. Esta encuesta estudia las actitudes sobre la jubilación en España. Tardará unos 5 minutos. Sus respuestas son anónimas." />
+            placeholder={t("intro.placeholder")} />
           {/* Botón IA superpuesto arriba a la derecha del textarea */}
           <button
             onClick={generateWithAI}
             disabled={generating || questions.length === 0}
-            title={questions.length === 0 ? "Añade preguntas primero" : "Generar con IA"}
+            title={questions.length === 0 ? t("intro.anadir_preguntas") : t("intro.generar_con_ia")}
             style={{
               position: "absolute", top: 8, right: 8,
               background: "var(--accent-blue)", color: "#fff",
@@ -782,18 +800,18 @@ function IntroModal({ survey, questions, onClose, onSave }: {
               display: "flex", alignItems: "center", gap: 4,
               opacity: generating || questions.length === 0 ? 0.55 : 1,
             }}>
-            {generating ? "…" : "✦ IA"}
+            {generating ? "…" : t("intro.btn_ia")}
           </button>
         </div>
         {generating && (
           <p className="muted" style={{ fontSize: "0.82rem", marginTop: 6 }}>
-            Generando introducción basada en tus preguntas…
+            {t("intro.generando")}
           </p>
         )}
         <div className="flex-between" style={{ marginTop: "1rem" }}>
-          <button className="secondary" onClick={onClose}>Cancelar</button>
+          <button className="secondary" onClick={onClose}>{t("intro.btn_cancelar")}</button>
           <button disabled={saving} onClick={async () => { setSaving(true); await onSave(desc); setSaving(false); }}>
-            {saving ? "Guardando…" : "Guardar"}
+            {saving ? t("intro.btn_guardando") : t("intro.btn_guardar")}
           </button>
         </div>
       </div>
@@ -807,6 +825,7 @@ function ImportModal({ idioma, pais, onClose, onImport, hasExisting }: {
   idioma: string; pais: string; hasExisting: boolean;
   onClose: () => void; onImport: (draft: SurveyImportDraft) => void;
 }) {
+  const { t } = useLocale();
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [draft, setDraft] = useState<SurveyImportDraft | null>(null);
@@ -823,17 +842,17 @@ function ImportModal({ idioma, pais, onClose, onImport, hasExisting }: {
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" style={{ maxWidth: 560 }} onClick={(e) => e.stopPropagation()}>
-        <h2 style={{ marginTop: 0 }}>Importar cuestionario</h2>
+        <h2 style={{ marginTop: 0 }}>{t("import_modal.titulo")}</h2>
         {!draft ? (
           <>
             {hasExisting && (
               <div style={{ background: "rgba(255,180,0,0.12)", border: "1px solid rgba(255,180,0,0.4)",
                             borderRadius: 6, padding: "0.65rem 0.85rem", marginBottom: "0.85rem",
                             fontSize: "0.88rem" }}>
-                ⚠️ Al importar se reemplazarán las preguntas actuales de esta encuesta.
+                {t("import_modal.advertencia")}
               </div>
             )}
-            <p className="muted">Sube un PDF o Word. La IA lo convertirá a nuestro formato, incluyendo saltos condicionales si los detecta.</p>
+            <p className="muted">{t("import_modal.desc")}</p>
             <div style={{ border: "2px dashed var(--border)", borderRadius: 8, padding: "1.5rem", textAlign: "center", marginBottom: "1rem" }}>
               <input type="file" accept=".pdf,.docx,.doc" style={{ display: "block", margin: "0 auto" }}
                 onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
@@ -841,13 +860,13 @@ function ImportModal({ idioma, pais, onClose, onImport, hasExisting }: {
             </div>
             {err && <p style={{ color: "var(--danger)" }}>{err}</p>}
             <div className="flex-between">
-              <button className="secondary" onClick={onClose}>Cancelar</button>
-              <button onClick={analyze} disabled={!file || loading}>{loading ? "Analizando…" : "Analizar con IA"}</button>
+              <button className="secondary" onClick={onClose}>{t("import_modal.btn_cancelar")}</button>
+              <button onClick={analyze} disabled={!file || loading}>{loading ? t("import_modal.btn_analizando") : t("import_modal.btn_analizar")}</button>
             </div>
           </>
         ) : (
           <>
-            <p className="muted">Revisa el cuestionario extraído antes de cargarlo.</p>
+            <p className="muted">{t("import_modal.revisar")}</p>
             <div style={{ background: "var(--bg-2)", borderRadius: 6, padding: "0.75rem", marginBottom: "1rem" }}>
               <strong>{draft.nombre}</strong>{draft.tema && <span className="muted"> — {draft.tema}</span>}
             </div>
@@ -860,15 +879,15 @@ function ImportModal({ idioma, pais, onClose, onImport, hasExisting }: {
                   {(q.opciones ?? []).length > 0 && <span className="muted" style={{ fontSize: "0.8rem", marginLeft: 6 }}>{q.opciones!.join(" · ")}</span>}
                   {(q.condiciones ?? []).length > 0 && (
                     <div className="muted" style={{ fontSize: "0.78rem", marginTop: 2 }}>
-                      {q.condiciones!.map((c, ci) => <span key={ci}> → Si "{c.si_respuesta}" → {c.ir_a_orden != null ? `P${c.ir_a_orden + 1}` : "Fin"}</span>)}
+                      {q.condiciones!.map((c, ci) => <span key={ci}> → {t("design.si_responde_card")} "{c.si_respuesta}" → {c.ir_a_orden != null ? `P${c.ir_a_orden + 1}` : t("design.fin_encuesta_card")}</span>)}
                     </div>
                   )}
                 </div>
               ))}
             </div>
             <div className="flex-between" style={{ marginTop: "1rem" }}>
-              <button className="secondary" onClick={() => setDraft(null)}>← Volver a subir</button>
-              <button onClick={() => onImport(draft)}>Cargar cuestionario</button>
+              <button className="secondary" onClick={() => setDraft(null)}>{t("import_modal.btn_volver")}</button>
+              <button onClick={() => onImport(draft)}>{t("import_modal.btn_cargar")}</button>
             </div>
           </>
         )}

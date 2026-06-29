@@ -4,6 +4,7 @@ import SpainChoropleth from "../components/SpainChoropleth";
 import ChileChoropleth from "../components/ChileChoropleth";
 import { useCountry } from "../CountryContext";
 import { getCountry } from "../countries";
+import { useLocale } from "../locales/index";
 
 const emptyPersona = (pais = "ES"): PersonaBase => ({
   nombre: "",
@@ -113,11 +114,12 @@ function StatBars({ items, detail, onSelect, selected }: {
   onSelect?: (label: string) => void;
   selected?: string;
 }) {
+  const { t } = useLocale();
   const max = Math.max(1, ...items.map(([, c]) => c));
   const total = items.reduce((s, [, c]) => s + c, 0) || 1;
   return (
     <div className="bars">
-      {items.length === 0 && <p className="muted">Sin datos.</p>}
+      {items.length === 0 && <p className="muted">{t("common.sin_datos")}</p>}
       {items.map(([label, count]) => (
         <div
           className={`bar-row${selected === label ? " active" : ""}`}
@@ -148,6 +150,7 @@ function Donut({ items, onSelect, selected }: {
   onSelect?: (label: string) => void;
   selected?: string;
 }) {
+  const { t } = useLocale();
   const total = items.reduce((s, [, c]) => s + c, 0) || 1;
   const r = 62;
   const C = 2 * Math.PI * r;
@@ -172,7 +175,7 @@ function Donut({ items, onSelect, selected }: {
           })}
         </g>
         <text x="90" y="86" textAnchor="middle" className="donut-total">{total}</text>
-        <text x="90" y="106" textAnchor="middle" className="donut-sub">personas</text>
+        <text x="90" y="106" textAnchor="middle" className="donut-sub">{t("personas.donut_sub")}</text>
       </svg>
       <div className="donut-legend">
         {items.map(([label, count]) => (
@@ -197,6 +200,7 @@ function Pyramid({ data, onSelect, selected }: {
   onSelect?: (band: string) => void;
   selected?: string;
 }) {
+  const { t } = useLocale();
   const max = Math.max(
     1,
     ...data.map((d) => Math.max(d.Hombre_es + d.Hombre_ext, d.Mujer_es + d.Mujer_ext))
@@ -205,9 +209,9 @@ function Pyramid({ data, onSelect, selected }: {
   return (
     <div className="pyramid">
       <div className="pyr-legend">
-        <span><i className="sw h" /> Hombres</span>
-        <span><i className="sw m" /> Mujeres</span>
-        <span className="muted">tono claro · nacidos fuera</span>
+        <span><i className="sw h" /> {t("personas.pyr_hombres")}</span>
+        <span><i className="sw m" /> {t("personas.pyr_mujeres")}</span>
+        <span className="muted">{t("personas.pyr_nacidos_fuera")}</span>
       </div>
       {rows.map((d) => {
         const hTot = d.Hombre_es + d.Hombre_ext;
@@ -252,6 +256,7 @@ const personasCache: Record<string, Persona[]> = {};
 
 export default function PersonasPage() {
   const { pais, country } = useCountry();
+  const { t, locale } = useLocale();
   const [personas, setPersonas] = useState<Persona[]>(personasCache[pais] ?? []);
   const [loaded, setLoaded] = useState(personasCache[pais] !== undefined);
   const [progress, setProgress] = useState(personasCache[pais] !== undefined ? 100 : 6);
@@ -292,7 +297,7 @@ export default function PersonasPage() {
   }, [loaded]);
 
   const onDelete = async (id: number) => {
-    if (!confirm("¿Archivar esta persona? Sus respuestas previas se conservan.")) return;
+    if (!confirm(t("personas.confirmar_archivar"))) return;
     await api.deletePersona(id);
     load();
   };
@@ -373,7 +378,7 @@ export default function PersonasPage() {
       {showLoader && (
         <div className="loading-overlay">
           <div className="loading-pop">
-            <span className="loading-label blink-slow">Cargando población…</span>
+            <span className="loading-label blink-slow">{t("personas.cargando")}</span>
             <div className="loading-bar">
               <div className="loading-bar-fill" style={{ width: `${progress}%` }} />
             </div>
@@ -384,56 +389,58 @@ export default function PersonasPage() {
       <div className="toolbar">
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: 14, flexWrap: "wrap" }}>
-            <h2 style={{ margin: 0, fontWeight: 400, fontSize: "2.6rem" }}>Población sintética</h2>
+            <h2 style={{ margin: 0, fontWeight: 400, fontSize: "2.6rem" }}>{t("personas.title")}</h2>
             {loaded && (
               <span className="muted" style={{ fontSize: "1rem", whiteSpace: "nowrap" }}>
-                {filtered.length} de {personas.length}
+                {t("personas.n_de_total", { n: filtered.length, total: personas.length })}
               </span>
             )}
           </div>
           <p className="muted" style={{ margin: 0, maxWidth: 620, fontSize: "0.85rem" }}>
-            Perfiles modelados para reflejar la distribución real de la población {country.gentilicio}
-            {" "}adulta (mayor de 18 años) —edad, sexo, región y estudios—. Estructura basada en {country.fuenteDemografica}.
+            {t("personas.subtitle", {
+              adj: locale === "en" ? country.adjetivoEN : country.gentilicio,
+              fuente: country.fuenteDemografica,
+            })}
           </p>
         </div>
         <div style={{ flex: 1 }} />
-        <button onClick={() => setGenOpen(true)}>Generar con IA</button>
+        <button onClick={() => setGenOpen(true)}>{t("personas.generar_ia")}</button>
         <button className="secondary" onClick={() => setEditing(emptyPersona(pais))}>
-          + Nueva manual
+          {t("personas.nueva_manual")}
         </button>
       </div>
 
       <div className="card filters">
-        <div style={{ flex: "2 1 200px" }}><label>Nombre</label>
+        <div style={{ flex: "2 1 200px" }}><label>{t("personas.filtro_nombre")}</label>
           <input value={f.nombre} onChange={(e) => upd({ nombre: e.target.value })} /></div>
-        <div style={{ flex: "0 0 150px" }}><label>Edad (min–máx)</label>
+        <div style={{ flex: "0 0 150px" }}><label>{t("personas.filtro_edad")}</label>
           <div style={{ display: "flex", gap: 4 }}>
-            <input type="number" placeholder="mín" value={f.edadMin} onChange={(e) => upd({ edadMin: e.target.value })} />
-            <input type="number" placeholder="máx" value={f.edadMax} onChange={(e) => upd({ edadMax: e.target.value })} />
+            <input type="number" placeholder={t("personas.filtro_edad_min")} value={f.edadMin} onChange={(e) => upd({ edadMin: e.target.value })} />
+            <input type="number" placeholder={t("personas.filtro_edad_max")} value={f.edadMax} onChange={(e) => upd({ edadMax: e.target.value })} />
           </div></div>
-        <div><label>Origen</label>
+        <div><label>{t("personas.filtro_origen")}</label>
           <input value={f.origen} onChange={(e) => upd({ origen: e.target.value })} /></div>
-        <div><label>Residencia</label>
+        <div><label>{t("personas.filtro_residencia")}</label>
           <input value={f.residencia} onChange={(e) => upd({ residencia: e.target.value })} /></div>
-        <div><label>Ocupación</label>
+        <div><label>{t("personas.filtro_ocupacion")}</label>
           <input value={f.ocupacion} onChange={(e) => upd({ ocupacion: e.target.value })} /></div>
-        <div><label>Tags</label>
+        <div><label>{t("personas.filtro_tags")}</label>
           <input value={f.tags} onChange={(e) => upd({ tags: e.target.value })} /></div>
-        <div style={{ flex: "0 0 120px" }}><label>Fuente</label>
+        <div style={{ flex: "0 0 120px" }}><label>{t("personas.filtro_fuente")}</label>
           <select value={f.fuente} onChange={(e) => upd({ fuente: e.target.value })}>
-            <option value="">Todas</option>
-            <option value="ai">IA</option>
-            <option value="manual">Manual</option>
+            <option value="">{t("personas.filtro_fuente_todas")}</option>
+            <option value="ai">{t("personas.filtro_fuente_ia")}</option>
+            <option value="manual">{t("personas.filtro_fuente_manual")}</option>
           </select></div>
         <div style={{ flex: "0 0 auto", display: "flex", alignItems: "flex-end" }}>
-          <button className="secondary" onClick={() => setF({ ...EMPTY_FILTERS })}>Limpiar</button>
+          <button className="secondary" onClick={() => setF({ ...EMPTY_FILTERS })}>{t("personas.filtro_limpiar")}</button>
         </div>
       </div>
 
       {(() => {
         // Fichas reutilizadas en ambos layouts
         const cardPiramide = (
-          <div className="card"><h3>Pirámide demográfica</h3>
+          <div className="card"><h3>{t("personas.stats_piramide")}</h3>
             <Pyramid
               data={stats.pyr}
               selected={AGE_BANDS.find(([, lo, hi]) => String(lo) === f.edadMin && String(hi) === f.edadMax)?.[0] ?? ""}
@@ -448,19 +455,19 @@ export default function PersonasPage() {
           </div>
         );
         const cardIngresos = (
-          <div className="card"><h3>Nivel de ingresos</h3>
+          <div className="card"><h3>{t("personas.stats_ingresos")}</h3>
             <StatBars items={stats.incItems} selected={f.ingresos}
               onSelect={(l) => setF((p) => ({ ...p, ingresos: p.ingresos === l ? "" : l }))} />
           </div>
         );
         const cardGenero = (
-          <div className="card"><h3>Género</h3>
+          <div className="card"><h3>{t("personas.stats_genero")}</h3>
             <Donut items={stats.genItems} selected={f.genero}
               onSelect={(l) => setF((p) => ({ ...p, genero: p.genero === l ? "" : l }))} />
           </div>
         );
         const cardEducacion = (
-          <div className="card"><h3>Nivel de educación</h3>
+          <div className="card"><h3>{t("personas.stats_educacion")}</h3>
             <StatBars items={stats.eduItems} detail={EDU_DESC} selected={f.educacion}
               onSelect={(l) => setF((p) => ({ ...p, educacion: p.educacion === l ? "" : l }))} />
           </div>
@@ -470,7 +477,7 @@ export default function PersonasPage() {
         if (country.mapa === "cl-choropleth") {
           return (
             <>
-              <div className="card stats-map"><h3>Distribución territorial</h3>
+              <div className="card stats-map"><h3>{t("personas.stats_mapa")}</h3>
                 <ChileChoropleth
                   byRegion={stats.byRegion}
                   selectedRegion={f.region}
@@ -490,7 +497,7 @@ export default function PersonasPage() {
           <div className="stats-layout">
             <div className="stats-side">{cardPiramide}{cardIngresos}</div>
             <div className="stats-center">
-              <div className="card"><h3>Distribución territorial</h3>
+              <div className="card"><h3>{t("personas.stats_mapa")}</h3>
                 <SpainChoropleth
                   byRegion={stats.byRegion}
                   byProvince={stats.byProvince}
@@ -510,7 +517,7 @@ export default function PersonasPage() {
 
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "1rem", marginTop: "1rem" }}>
         <button className="secondary" onClick={() => setListCollapsed((v) => !v)}>
-          {listCollapsed ? "Mostrar lista" : "Ocultar lista · ver solo fichas"}
+          {listCollapsed ? t("personas.mostrar_lista") : t("personas.ocultar_lista")}
         </button>
       </div>
 
@@ -518,21 +525,21 @@ export default function PersonasPage() {
       <div className="card table-card">
         {totalPages > 1 && (
           <div className="pagination pagination-top">
-            <button className="secondary" disabled={current <= 1} onClick={() => setPage(current - 1)}>← Anterior</button>
-            <span className="muted">Página {current} de {totalPages}</span>
-            <button className="secondary" disabled={current >= totalPages} onClick={() => setPage(current + 1)}>Siguiente →</button>
+            <button className="secondary" disabled={current <= 1} onClick={() => setPage(current - 1)}>{t("personas.tabla_anterior")}</button>
+            <span className="muted">{t("personas.tabla_pagina", { current, total: totalPages })}</span>
+            <button className="secondary" disabled={current >= totalPages} onClick={() => setPage(current + 1)}>{t("personas.tabla_siguiente")}</button>
           </div>
         )}
         <table>
           <thead>
             <tr>
-              <th>Nombre</th>
-              <th>Edad</th>
-              <th>Origen</th>
-              <th>Residencia</th>
-              <th>Ocupación</th>
-              <th>Fuente</th>
-              <th>Tags</th>
+              <th>{t("personas.tabla_nombre")}</th>
+              <th>{t("personas.tabla_edad")}</th>
+              <th>{t("personas.tabla_origen")}</th>
+              <th>{t("personas.tabla_residencia")}</th>
+              <th>{t("personas.tabla_ocupacion")}</th>
+              <th>{t("personas.tabla_fuente")}</th>
+              <th>{t("personas.tabla_tags")}</th>
               <th></th>
             </tr>
           </thead>
@@ -545,15 +552,15 @@ export default function PersonasPage() {
                 <td>{p.sociodemografico?.pais_residencia ?? "—"}</td>
                 <td>{p.sociodemografico?.ocupacion ?? "—"}</td>
                 <td><span className="tag">{p.origen}</span></td>
-                <td>{(p.tags ?? []).map((t) => <span key={t} className="tag">{t}</span>)}</td>
+                <td>{(p.tags ?? []).map((tag) => <span key={tag} className="tag">{tag}</span>)}</td>
                 <td style={{ whiteSpace: "nowrap" }}>
-                  <button className="secondary" onClick={() => setEditing(p)}>Editar</button>{" "}
-                  <button className="danger" onClick={() => onDelete(p.id)}>Archivar</button>
+                  <button className="secondary" onClick={() => setEditing(p)}>{t("personas.btn_editar")}</button>{" "}
+                  <button className="danger" onClick={() => onDelete(p.id)}>{t("personas.btn_archivar")}</button>
                 </td>
               </tr>
             ))}
             {filtered.length === 0 && (
-              <tr><td colSpan={8} className="muted">Sin resultados con estos filtros.</td></tr>
+              <tr><td colSpan={8} className="muted">{t("personas.tabla_sin_resultados")}</td></tr>
             )}
           </tbody>
         </table>
@@ -596,6 +603,7 @@ function PersonaEditor({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { t } = useLocale();
   const [p, setP] = useState<PersonaBase & { id?: number }>(JSON.parse(JSON.stringify(initial)));
   const [saving, setSaving] = useState(false);
 
@@ -619,82 +627,82 @@ function PersonaEditor({
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h2>{p.id ? "Editar persona" : "Nueva persona"}</h2>
+        <h2>{p.id ? t("editor.titulo_editar") : t("editor.titulo_nueva")}</h2>
 
         <div className="row">
-          <div><label>Nombre</label>
+          <div><label>{t("editor.nombre")}</label>
             <input value={p.nombre} onChange={(e) => setP({ ...p, nombre: e.target.value })} /></div>
-          <div><label>Idioma</label>
+          <div><label>{t("editor.idioma")}</label>
             <input value={p.idioma} onChange={(e) => setP({ ...p, idioma: e.target.value })} /></div>
         </div>
 
-        <h3>Sociodemográfico</h3>
+        <h3>{t("editor.seccion_socio")}</h3>
         <div className="row">
-          <div><label>Edad</label>
+          <div><label>{t("editor.edad")}</label>
             <input type="number" value={sd.edad ?? ""} onChange={(e) =>
               setP({ ...p, sociodemografico: { ...sd, edad: e.target.value ? +e.target.value : null } })} /></div>
-          <div><label>Género</label>
+          <div><label>{t("editor.genero")}</label>
             <input value={sd.genero ?? ""} onChange={(e) =>
               setP({ ...p, sociodemografico: { ...sd, genero: e.target.value } })} /></div>
-          <div><label>País de origen</label>
+          <div><label>{t("editor.pais_origen")}</label>
             <input value={sd.pais_origen ?? ""} onChange={(e) =>
               setP({ ...p, sociodemografico: { ...sd, pais_origen: e.target.value } })} /></div>
-          <div><label>País de residencia</label>
+          <div><label>{t("editor.pais_residencia")}</label>
             <input value={sd.pais_residencia ?? ""} onChange={(e) =>
               setP({ ...p, sociodemografico: { ...sd, pais_residencia: e.target.value } })} /></div>
-          <div><label>Código postal</label>
+          <div><label>{t("editor.codigo_postal")}</label>
             <input value={sd.codigo_postal ?? ""} onChange={(e) =>
               setP({ ...p, sociodemografico: { ...sd, codigo_postal: e.target.value } })} /></div>
         </div>
         <div className="row">
-          <div><label>Ocupación</label>
+          <div><label>{t("editor.ocupacion")}</label>
             <input value={sd.ocupacion ?? ""} onChange={(e) =>
               setP({ ...p, sociodemografico: { ...sd, ocupacion: e.target.value } })} /></div>
-          <div><label>Nivel educativo</label>
+          <div><label>{t("editor.nivel_educativo")}</label>
             <input value={sd.nivel_educativo ?? ""} onChange={(e) =>
               setP({ ...p, sociodemografico: { ...sd, nivel_educativo: e.target.value } })} /></div>
-          <div><label>Ingresos</label>
+          <div><label>{t("editor.ingresos")}</label>
             <input value={sd.ingresos ?? ""} onChange={(e) =>
               setP({ ...p, sociodemografico: { ...sd, ingresos: e.target.value } })} /></div>
         </div>
 
-        <h3>Consumidor</h3>
-        <div><label>Categorías de interés (coma)</label>
+        <h3>{t("editor.seccion_consumidor")}</h3>
+        <div><label>{t("editor.categorias_interes")}</label>
           <input value={listField(cons.categorias_interes)} onChange={(e) =>
             setP({ ...p, consumidor: { ...cons, categorias_interes: parseList(e.target.value) } })} /></div>
-        <div><label>Marcas (coma)</label>
+        <div><label>{t("editor.marcas")}</label>
           <input value={listField(cons.marcas)} onChange={(e) =>
             setP({ ...p, consumidor: { ...cons, marcas: parseList(e.target.value) } })} /></div>
         <div className="row">
-          <div><label>Hábitos de gasto</label>
+          <div><label>{t("editor.habitos_gasto")}</label>
             <input value={cons.habitos_gasto ?? ""} onChange={(e) =>
               setP({ ...p, consumidor: { ...cons, habitos_gasto: e.target.value } })} /></div>
-          <div><label>Sensibilidad al precio</label>
+          <div><label>{t("editor.sensibilidad_precio")}</label>
             <input value={cons.sensibilidad_precio ?? ""} onChange={(e) =>
               setP({ ...p, consumidor: { ...cons, sensibilidad_precio: e.target.value } })} /></div>
         </div>
 
-        <h3>Opinión / valores</h3>
-        <div><label>Valores ante la vida (coma)</label>
+        <h3>{t("editor.seccion_opinion")}</h3>
+        <div><label>{t("editor.valores_vida")}</label>
           <input value={listField(op.valores_vida)} onChange={(e) =>
             setP({ ...p, opinion: { ...op, valores_vida: parseList(e.target.value) } })} /></div>
-        <div><label>Rasgos de personalidad (coma)</label>
+        <div><label>{t("editor.rasgos_personalidad")}</label>
           <input value={listField(op.rasgos_personalidad)} onChange={(e) =>
             setP({ ...p, opinion: { ...op, rasgos_personalidad: parseList(e.target.value) } })} /></div>
 
-        <h3>Tags y biografía</h3>
-        <div><label>Tags (coma)</label>
+        <h3>{t("editor.seccion_tags_bio")}</h3>
+        <div><label>{t("editor.tags")}</label>
           <input value={listField(p.tags)} onChange={(e) =>
             setP({ ...p, tags: parseList(e.target.value) })} /></div>
-        <div><label>Bio (narrativa del personaje)</label>
+        <div><label>{t("editor.bio")}</label>
           <textarea rows={3} value={p.bio} onChange={(e) => setP({ ...p, bio: e.target.value })} /></div>
 
         <Matices sd={sd} />
 
         <div className="flex-between" style={{ marginTop: "1rem" }}>
-          <button className="secondary" onClick={onClose}>Cancelar</button>
+          <button className="secondary" onClick={onClose}>{t("common.cancelar")}</button>
           <button onClick={save} disabled={saving || !p.nombre}>
-            {saving ? "Guardando…" : "Guardar"}
+            {saving ? t("common.guardando") : t("common.guardar")}
           </button>
         </div>
       </div>
@@ -705,6 +713,7 @@ function PersonaEditor({
 // ---------- Sección "Matices" (solo lectura) del enriquecimiento A–H ----------
 
 function Matices({ sd }: { sd: any }) {
+  const { t } = useLocale();
   if (!sd?.enriquecido) return null;
   const A = sd.hogar_familia ?? {}, B = sd.vehiculos ?? {}, C = sd.banca ?? {},
         D = sd.seguros ?? {}, E = sd.telecom ?? {}, F = sd.digital ?? {},
@@ -714,7 +723,7 @@ function Matices({ sd }: { sd: any }) {
     ? [B.principal?.marca, B.principal?.modelo].filter(Boolean).join(" ")
       + ` · ${B.principal?.combustible ?? ""} · ${B.principal?.antiguedad_anios ?? "?"} años`
       + ` · ${B.principal?.adquisicion ?? ""} · ${B.principal?.financiacion ?? ""}`
-    : "Sin vehículo" + (B.usa_transporte_publico ? " · usa transporte público" : "");
+    : t("matices.sin_vehiculo") + (B.usa_transporte_publico ? t("matices.usa_transporte") : "");
   const hijos = A.tiene_hijos
     ? `${A.num_hijos} (edades: ${lista(A.edades_hijos)})` + (A.monoparental ? " · monoparental" : "")
     : "Sin hijos";
@@ -726,24 +735,24 @@ function Matices({ sd }: { sd: any }) {
     + (C.bancos_secundarios?.length ? ` (+${C.bancos_secundarios.join(", ")})` : "");
   return (
     <>
-      <h3>Matices</h3>
+      <h3>{t("matices.titulo")}</h3>
       <div className="muted" style={{ fontSize: "0.85rem", lineHeight: 1.6 }}>
-        <p><strong>Hogar/familia:</strong> {A.convivencia} · vivienda: {A.regimen_vivienda} · hijos: {hijos}
+        <p><strong>{t("matices.hogar")}:</strong> {A.convivencia} · vivienda: {A.regimen_vivienda} · hijos: {hijos}
           {" "}· colegio: {colegio} · mascotas: {A.mascotas}
           {A.cuida_dependientes ? " · cuida dependientes" : ""}
           {A.hijos_necesidades_especiales ? " · hijo con necesidades especiales" : ""}
           {A.hijos_adoptados ? " · hijo adoptado" : ""}</p>
-        <p><strong>Vehículo:</strong> {veh}</p>
-        <p><strong>Banca:</strong> {banco} · {C.tipo} · productos: {lista(C.productos)}
+        <p><strong>{t("matices.vehiculo")}:</strong> {veh}</p>
+        <p><strong>{t("matices.banca")}:</strong> {banco} · {C.tipo} · productos: {lista(C.productos)}
           {" "}· endeudamiento: {C.nivel_endeudamiento} · {C.perfil_ahorro}</p>
-        <p><strong>Seguros:</strong> salud: {salud} · pólizas: {polizas}</p>
-        <p><strong>Telecom:</strong> {E.operador_movil} ({E.modalidad})
+        <p><strong>{t("matices.seguros")}:</strong> salud: {salud} · pólizas: {polizas}</p>
+        <p><strong>{t("matices.telecom")}:</strong> {E.operador_movil} ({E.modalidad})
           {E.convergente_fibra ? " · fibra" : ""} · {E.smartphone}</p>
-        <p><strong>Digital:</strong> adopción {F.adopcion_digital} · redes: {lista(F.redes_sociales)}
+        <p><strong>{t("matices.digital")}:</strong> adopción {F.adopcion_digital} · redes: {lista(F.redes_sociales)}
           {" "}· streaming: {lista(F.streaming)}{F.compra_online ? " · compra online" : ""}</p>
-        <p><strong>Laboral:</strong> {G.situacion} · {G.tipo_contrato} · teletrabajo: {G.teletrabajo}
+        <p><strong>{t("matices.laboral")}:</strong> {G.situacion} · {G.tipo_contrato} · teletrabajo: {G.teletrabajo}
           {" "}· sector: {G.sector ?? "—"} · {G.tamano_empresa}</p>
-        <p><strong>Consumo/hábitos:</strong> súper: {H.supermercado_habitual} · actividad: {H.actividad_fisica}
+        <p><strong>{t("matices.consumo")}:</strong> súper: {H.supermercado_habitual} · actividad: {H.actividad_fisica}
           {" "}· {H.fumador ? "fumador" : "no fumador"} · alcohol: {H.consumo_alcohol}</p>
       </div>
     </>
@@ -754,6 +763,7 @@ function Matices({ sd }: { sd: any }) {
 
 function GenerateModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
   const { pais, country } = useCountry();
+  const { t } = useLocale();
   const [params, setParams] = useState<GenerateParams>({ cantidad: 3, idioma: "es", pais });
   const [loading, setLoading] = useState(false);
   const [drafts, setDrafts] = useState<PersonaBase[] | null>(null);
@@ -794,69 +804,69 @@ function GenerateModal({ onClose, onSaved }: { onClose: () => void; onSaved: () 
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h2>Generar personas con IA</h2>
+        <h2>{t("generar.titulo")}</h2>
         <div className="row">
-          <div><label>Cantidad</label>
+          <div><label>{t("generar.cantidad")}</label>
             <input type="number" min={1} max={20} value={params.cantidad}
               onChange={(e) => setParams({ ...params, cantidad: +e.target.value })} /></div>
-          <div><label>Idioma</label>
+          <div><label>{t("generar.idioma")}</label>
             <input value={params.idioma} onChange={(e) => setParams({ ...params, idioma: e.target.value })} /></div>
-          <div><label>País (del escenario)</label>
+          <div><label>{t("generar.pais")}</label>
             <input value={country.nombre} disabled title="Se cambia con el selector de país de la barra superior" /></div>
-          <div><label>Región (opcional)</label>
+          <div><label>{t("generar.region")}</label>
             <select value={params.region ?? ""} onChange={(e) => setParams({ ...params, region: e.target.value || undefined })}>
-              <option value="">Cualquiera</option>
+              <option value="">{t("generar.cualquiera")}</option>
               {country.regiones.map((r) => <option key={r} value={r}>{r}</option>)}
             </select></div>
         </div>
         <div className="row">
-          <div><label>Edad mín.</label>
+          <div><label>{t("generar.edad_min")}</label>
             <input type="number" value={params.edad_min ?? ""}
               onChange={(e) => setParams({ ...params, edad_min: e.target.value ? +e.target.value : undefined })} /></div>
-          <div><label>Edad máx.</label>
+          <div><label>{t("generar.edad_max")}</label>
             <input type="number" value={params.edad_max ?? ""}
               onChange={(e) => setParams({ ...params, edad_max: e.target.value ? +e.target.value : undefined })} /></div>
-          <div><label>Segmento</label>
+          <div><label>{t("generar.segmento")}</label>
             <input value={params.segmento ?? ""} onChange={(e) => setParams({ ...params, segmento: e.target.value })} /></div>
         </div>
-        <div><label>Instrucciones adicionales</label>
+        <div><label>{t("generar.instrucciones")}</label>
           <textarea rows={2} value={params.instrucciones ?? ""}
             onChange={(e) => setParams({ ...params, instrucciones: e.target.value })} /></div>
 
         <div style={{ marginTop: "0.75rem" }}>
           <button onClick={generate} disabled={loading}>
-            {loading ? "Generando…" : "Generar borradores"}
+            {loading ? t("generar.btn_generando") : t("generar.btn_generar")}
           </button>
         </div>
 
         {drafts && (
           <div style={{ marginTop: "1rem" }}>
             <div className="flex-between">
-              <h3>Borradores ({drafts.length})</h3>
-              <button className="secondary" onClick={saveAll}>Guardar todos</button>
+              <h3>{t("generar.borradores_titulo", { n: drafts.length })}</h3>
+              <button className="secondary" onClick={saveAll}>{t("generar.guardar_todos")}</button>
             </div>
             {drafts.map((d, i) => (
               <div className="card" key={i}>
                 <div className="flex-between">
                   <strong>{d.nombre}</strong>
                   <button onClick={() => saveDraft(i)} disabled={saved.has(i) || savingIdx === i}>
-                    {saved.has(i) ? "Guardada" : savingIdx === i ? "…" : "Guardar"}
+                    {saved.has(i) ? t("generar.guardada") : savingIdx === i ? "…" : t("common.guardar")}
                   </button>
                 </div>
                 <p className="muted">
-                  {d.sociodemografico?.edad} años · {d.sociodemografico?.ocupacion} · vive en {d.sociodemografico?.pais_residencia ?? "—"}
+                  {d.sociodemografico?.edad} años · {d.sociodemografico?.ocupacion} · {t("generar.vive_en")} {d.sociodemografico?.pais_residencia ?? "—"}
                   {d.sociodemografico?.pais_origen && d.sociodemografico?.pais_origen !== d.sociodemografico?.pais_residencia
-                    ? ` (origen: ${d.sociodemografico?.pais_origen})` : ""}
+                    ? ` (${t("generar.origen_short")}: ${d.sociodemografico?.pais_origen})` : ""}
                 </p>
                 <p style={{ fontSize: "0.85rem" }}>{d.bio}</p>
               </div>
             ))}
-            <p className="muted">Para afinar un borrador, guárdalo y edítalo desde la lista.</p>
+            <p className="muted">{t("generar.afinar")}</p>
           </div>
         )}
 
         <div className="flex-between" style={{ marginTop: "1rem" }}>
-          <button className="secondary" onClick={onClose}>Cerrar</button>
+          <button className="secondary" onClick={onClose}>{t("common.cerrar")}</button>
         </div>
       </div>
     </div>

@@ -259,6 +259,17 @@ a { color: inherit; }
 }
 .help-btn:hover { background: var(--panel-2); color: var(--text); opacity: 1; }
 
+/* EN / ES language toggle button */
+.locale-toggle {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: transparent; color: var(--text-dim);
+  border: 1px solid var(--border-strong); border-radius: var(--radius);
+  height: 34px; padding: 0 0.65rem; margin-left: 0.85rem;
+  font-size: 0.75rem; font-weight: 600; letter-spacing: 0.06em;
+  flex: 0 0 auto; cursor: pointer; white-space: nowrap;
+}
+.locale-toggle:hover { background: var(--panel-2); color: var(--text); opacity: 1; }
+
 .country-select {
   background: transparent;
   border: 1px solid var(--border-strong);

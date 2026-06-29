@@ -10,7 +10,9 @@ export type Band = [string, number, number, number, number];
 export interface CountryConfig {
   codigo: CountryCode;
   nombre: string;
+  nombreEN: string;
   gentilicio: string;
+  adjetivoEN: string;
   fuenteDemografica: string;
   regiones: string[];
   pyramidBands: Band[];
@@ -21,7 +23,9 @@ export interface CountryConfig {
 const ES: CountryConfig = {
   codigo: "ES",
   nombre: "España",
+  nombreEN: "Spain",
   gentilicio: "española",
+  adjetivoEN: "Spanish",
   fuenteDemografica: "INE 2024",
   mapa: "es-choropleth",
   pyramidBands: [
@@ -45,7 +49,9 @@ const ES: CountryConfig = {
 const CL: CountryConfig = {
   codigo: "CL",
   nombre: "Chile",
+  nombreEN: "Chile",
   gentilicio: "chilena",
+  adjetivoEN: "Chilean",
   fuenteDemografica: "Censo INE Chile 2024",
   mapa: "cl-choropleth",
   // Reparto de adultos 18+ coherente con el Censo 2024 INE (65+ ≈ 14%).
